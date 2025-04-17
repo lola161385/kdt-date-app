@@ -1,0 +1,16 @@
+<!--templates/home.html-->
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>홈</title>
+</head>
+<body>
+<h2>홈페이지</h2>
+<p th:text="'환영합니다, ' + ${userEmail} + '님!'"></p>
+<a th:href="@{/logout}">로그아웃</a>
+<form th:action="@{/delete-account}" method="post" style="margin-top: 1rem;">
+    <button type="submit">회원탈퇴</button>
+</form>
+</body>
+</html>

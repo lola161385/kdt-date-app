@@ -1,0 +1,80 @@
+
+<!--templates/login.html-->
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Login</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+<h2>Login</h2>
+<form id="login-form">
+    <label for="email">Email:</label>
+    <input type="email" id="email" required>
+    <br>
+    <label for="password">Password:</label>
+    <input type="password" id="password" required>
+    <br>
+    <button type="submit">Login</button>
+</form>
+
+<p>계정이 없으신가요? <a href="/register">회원가입</a></p>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyC_fS_I_g0jicSPKLqBxF8if2ffnDKrvNM",
+        authDomain: "date-app-41a1c.firebaseapp.com",
+        projectId: "date-app-41a1c",
+        storageBucket: "date-app-41a1c.firebasestorage.app",
+        messagingSenderId: "950558236414",
+        appId: "1:950558236414:web:f65dad635607345aa8cfaf",
+        measurementId: "G-EBTEFW9PDH"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    document.getElementById('login-form').addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        console.log("📨 로그인 시도 중... 이메일:", email);
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                console.log("✅ Firebase 로그인 성공:", userCredential.user.email);
+                return userCredential.user.getIdToken();
+            })
+            .then((idToken) => {
+                console.log("🪪 ID 토큰 획득 성공:", idToken.substring(0, 20) + "...");
+
+                return fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idToken: idToken }),
+                    credentials: 'include' // ✅ 서버에 쿠키 포함 보장
+                });
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log("🎉 Spring Boot 서버 로그인 성공!");
+                    location.replace('/home');
+                } else {
+                    console.error("❌ 서버 로그인 실패. 상태 코드:", response.status);
+                    return response.text().then(text => {
+                        throw new Error("서버 응답 오류: " + text);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('🚨 로그인 에러 발생:', error);
+                alert('로그인 실패: ' + error.message);
+            });
+    });
+</script>
+</body>
+</html>
