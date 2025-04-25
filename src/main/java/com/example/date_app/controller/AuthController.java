@@ -50,6 +50,14 @@ public class AuthController {
         if (userEmail == null) {
             return "redirect:/login?error=sessionExpired";
         }
+
+        try {
+            Map<String, Object> profile = firebaseAuthService.getUserProfile(userEmail);
+            model.addAttribute("profile", profile);
+        } catch (Exception e) {
+            model.addAttribute("error", "프로필 조회 실패: " + e.getMessage());
+        }
+
         model.addAttribute("userEmail", userEmail);
         return "home";
     }

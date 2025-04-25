@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>프로필 관리</title>
+</head>
+<body>
+<h2>프로필 <span th:if="${name}" th:text="'(' + ${name} + ')'"></span></h2>
+
+<div th:if="${error}" style="color: red;" th:text="${error}"></div>
+
+<form th:action="@{/profile}" method="post">
+    <label>이름:
+        <input type="text" name="name" th:value="${name}" required>
+    </label><br>
+
+    <label>생년월일:
+        <input type="date" name="birthdate" th:value="${birthdate}" required>
+    </label><br>
+
+    <label>자기소개:
+        <textarea name="bio" th:text="${bio}"></textarea>
+    </label><br>
+
+    <button type="submit">
+        <span th:if="${name == null}">저장하기</span>
+        <span th:if="${name != null}">수정하기</span>
+    </button>
+
+</form>
+
+<a th:href="@{/home}">홈으로</a>
+</body>
+</html>
