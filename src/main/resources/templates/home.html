@@ -8,7 +8,20 @@
 <body>
 <h2>홈페이지</h2>
 <p th:text="'환영합니다, ' + ${userEmail} + '님!'"></p>
+<!-- home.html 상단에 추가 -->
+<div th:if="${message}" style="color: green;" th:text="${message}"></div>
+<div th:if="${error}" style="color: red;" th:text="${error}"></div>
+<!-- 프로필 정보 표시 영역 -->
+<div th:if="${profile}">
+    <h3>프로필 정보</h3>
+    <p>이름: <span th:text="${profile.get('name')}"></span></p>
+    <p>생년월일: <span th:text="${profile.get('birthdate')}"></span></p>
+    <p>자기소개: <span th:text="${profile.get('bio')}"></span></p>
+</div>
 <a th:href="@{/logout}">로그아웃</a>
+<a th:href="@{/profile}">
+    <button type="button">프로필 페이지로 이동</button>
+</a>
 <form th:action="@{/delete-account}" method="post" style="margin-top: 1rem;">
     <button type="submit">회원탈퇴</button>
     <p>풀리퀘요청 테스트용</p>

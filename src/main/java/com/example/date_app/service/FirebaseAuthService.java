@@ -6,7 +6,12 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
 import com.google.firebase.auth.UserRecord;
+import com.google.firebase.database.*;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
 @Service
 public class FirebaseAuthService {
@@ -30,6 +35,59 @@ public class FirebaseAuthService {
     public void deleteUserByEmail(String email) throws FirebaseAuthException {
         UserRecord user = getUserByEmail(email);
         FirebaseAuth.getInstance().deleteUser(user.getUid());
+    }
+
+    // 사용자 프로필 저장
+    public void saveUserProfile(String email, String name, String birthdate, String bio)
+            throws FirebaseAuthException {
+
+        // 사용자 UID 조회 (이메일 기반)
+        UserRecord user = FirebaseAuth.getInstance().getUserByEmail(email);
+        String uid = user.getUid();
+
+        // Realtime Database 경로 설정
+        DatabaseReference ref = FirebaseDatabase.getInstance()
+                .getReference("users")
+                .child(uid);
+
+        // 프로필 데이터 구성
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("name", name);
+        profile.put("email", email);
+        profile.put("birthdate", birthdate);
+        profile.put("bio", bio);
+
+        // 비동기 저장
+        ref.setValueAsync(profile);
+    }
+
+    // 사용자 프로필 조회
+    public Map<String, Object> getUserProfile(String email) throws FirebaseAuthException, InterruptedException {
+        UserRecord user = FirebaseAuth.getInstance().getUserByEmail(email);
+        DatabaseReference ref = FirebaseDatabase.getInstance()
+                .getReference("users")
+                .child(user.getUid());
+
+        final Map<String, Object>[] result = new Map[]{null};
+        CountDownLatch latch = new CountDownLatch(1);
+
+        ref.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    result[0] = (Map<String, Object>) dataSnapshot.getValue();
+                }
+                latch.countDown();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                latch.countDown();
+            }
+        });
+
+        latch.await();
+        return result[0];
     }
 
 }
