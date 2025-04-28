@@ -22,6 +22,8 @@
 
 <p>계정이 없으신가요? <a href="/register">회원가입</a></p>
 
+<p id="message" style="color: red;"></p>
+
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyC_fS_I_g0jicSPKLqBxF8if2ffnDKrvNM",
@@ -36,38 +38,53 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
-    document.getElementById('login-form').addEventListener('submit', function (event) {
+    document.getElementById('login-form').addEventListener('submit', async function (event) {
         event.preventDefault();
 
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
+        const messageElement = document.getElementById('message');
 
-        console.log("📨 로그인 시도 중... 이메일:", email);
+        try {
+            console.log("📨 로그인 시도 중... 이메일:", email);
 
-        auth.signInWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-                console.log("✅ Firebase 로그인 성공:", userCredential.user.email);
-                return userCredential.user.getIdToken();
-            })
-            .then((idToken) => {
-                console.log("🪪 ID 토큰 획득 성공:", idToken.substring(0, 20) + "...");
+            const userCredential = await auth.signInWithEmailAndPassword(email, password);
+            const user = userCredential.user;
 
-                return fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ idToken: idToken }),
-                });
-            })
-            .then(response => response.json())
-            .then(data => {
-                const token = data.token;
-                localStorage.setItem('jwtToken', token);
-                location.replace('/home');
-            })
-            .catch(error => {
-                console.error('로그인 실패:', error);
-                alert('로그인 실패: ' + error.message);
+            // ✅ 이메일 인증 여부 확인
+            if (!user.emailVerified) {
+                await auth.signOut(); // 인증 안된 유저는 강제 로그아웃
+                messageElement.textContent = "❌ 이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.";
+                return;
+            }
+
+            console.log("✅ Firebase 로그인 성공:", user.email);
+
+            const idToken = await user.getIdToken();
+            console.log("🪪 ID 토큰 획득 성공:", idToken.substring(0, 20) + "...");
+
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({idToken: idToken}),
+                credentials: 'include' // 쿠키를 함께 보낸다 (만약 필요한 경우)
             });
+
+            if (!response.ok) {
+                const errorMsg = await response.text();
+                throw new Error(errorMsg);
+            }
+
+            const data = await response.json();
+            const token = data.token;
+            localStorage.setItem('jwtToken', token);
+
+            location.replace('/home');
+
+        } catch (error) {
+            console.error('로그인 실패:', error);
+            messageElement.textContent = "❌ 로그인 실패: " + (error.message || '오류 발생');
+        }
     });
 </script>
 </body>
