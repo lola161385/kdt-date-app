@@ -3,13 +3,18 @@ package com.example.date_app.controller;
 import com.example.date_app.service.FirebaseAuthService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Controller
@@ -19,8 +24,8 @@ public class ProfileController {
     private final FirebaseAuthService firebaseAuthService;
 
     @GetMapping("/profile")
-    public String profileForm(HttpSession session, Model model) {
-        String userEmail = (String) session.getAttribute("userEmail");
+    public String profileForm(Model model) {
+        String userEmail = getCurrentUserEmail();
         if (userEmail == null) {
             return "redirect:/login";
         }
@@ -45,10 +50,9 @@ public class ProfileController {
             @RequestParam String name,
             @RequestParam String birthdate,
             @RequestParam(required = false) String bio,
-            HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
-        String userEmail = (String) session.getAttribute("userEmail");
+        String userEmail = getCurrentUserEmail();
         if (userEmail == null) {
             return "redirect:/login";
         }
@@ -62,4 +66,29 @@ public class ProfileController {
             return "redirect:/profile";
         }
     }
+    @GetMapping("/api/profile")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> apiProfile() {
+        String userEmail = getCurrentUserEmail();
+        if (userEmail == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        }
+
+        try {
+            Map<String, Object> profile = firebaseAuthService.getUserProfile(userEmail);
+            Map<String, Object> result = new HashMap<>();
+            result.put("userEmail", userEmail);
+            result.put("profile", profile);
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Profile fetch failed"));
+        }
+    }
+
+    private String getCurrentUserEmail() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null) ? (String) auth.getPrincipal() : null;
+    }
+
 }

@@ -4,30 +4,94 @@
     <title>프로필 관리</title>
 </head>
 <body>
-<h2>프로필 <span th:if="${name}" th:text="'(' + ${name} + ')'"></span></h2>
+<h2>프로필 관리</h2>
 
-<div th:if="${error}" style="color: red;" th:text="${error}"></div>
+<div id="message"></div>
 
-<form th:action="@{/profile}" method="post">
+<!-- 프로필 폼 -->
+<form id="profile-form" style="display:none;">
     <label>이름:
-        <input type="text" name="name" th:value="${name}" required>
+        <input type="text" id="name" name="name" required>
     </label><br>
 
     <label>생년월일:
-        <input type="date" name="birthdate" th:value="${birthdate}" required>
+        <input type="date" id="birthdate" name="birthdate" required>
     </label><br>
 
     <label>자기소개:
-        <textarea name="bio" th:text="${bio}"></textarea>
+        <textarea id="bio" name="bio"></textarea>
     </label><br>
 
-    <button type="submit">
-        <span th:if="${name == null}">저장하기</span>
-        <span th:if="${name != null}">수정하기</span>
-    </button>
-
+    <button type="submit">저장하기</button>
 </form>
 
-<a th:href="@{/home}">홈으로</a>
+<a href="/home">홈으로</a>
+
+<script>
+    const token = localStorage.getItem('jwtToken');
+
+    if (!token) {
+        window.location.href = '/login';
+    } else {
+        fetch('/api/profile', {
+            method: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('인증 실패. 다시 로그인하세요.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('profile-form').style.display = 'block';
+                if (data.profile) {
+                    document.getElementById('name').value = data.profile.name || '';
+                    document.getElementById('birthdate').value = data.profile.birthdate || '';
+                    document.getElementById('bio').value = data.profile.bio || '';
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                localStorage.removeItem('jwtToken');
+                window.location.href = '/login';
+            });
+    }
+
+    document.getElementById('profile-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const name = document.getElementById('name').value;
+        const birthdate = document.getElementById('birthdate').value;
+        const bio = document.getElementById('bio').value;
+
+        fetch('/profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': 'Bearer ' + token
+            },
+            body: new URLSearchParams({
+                name: name,
+                birthdate: birthdate,
+                bio: bio
+            })
+        })
+            .then(response => {
+                if (response.ok) {
+                    alert('✅ 프로필 저장 성공!');
+                    window.location.href = '/home';
+                } else {
+                    throw new Error('❌ 저장 실패');
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                alert('❌ 오류 발생: ' + error.message);
+            });
+    });
+</script>
 </body>
 </html>
