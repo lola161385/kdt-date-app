@@ -20,6 +20,7 @@
     <button type="submit">Login</button>
 </form>
 
+<p><a href="#" id="reset-password-link">비밀번호를 잊으셨나요?</a></p>
 <p>계정이 없으신가요? <a href="/register">회원가입</a></p>
 
 <p id="message" style="color: red;"></p>
@@ -85,6 +86,20 @@
             console.error('로그인 실패:', error);
             messageElement.textContent = "❌ 로그인 실패: " + (error.message || '오류 발생');
         }
+    });
+
+    document.getElementById('reset-password-link').addEventListener('click', function () {
+        const email = prompt("비밀번호 재설정 메일을 받을 이메일을 입력하세요:");
+        if (!email) return;
+
+        firebase.auth().sendPasswordResetEmail(email)
+            .then(() => {
+                alert("✅ 비밀번호 재설정 이메일을 보냈습니다. 이메일을 확인해주세요.");
+            })
+            .catch(error => {
+                console.error("❌ 비밀번호 재설정 실패:", error);
+                alert("❌ " + (error.message || "비밀번호 재설정 중 오류 발생"));
+            });
     });
 </script>
 </body>
