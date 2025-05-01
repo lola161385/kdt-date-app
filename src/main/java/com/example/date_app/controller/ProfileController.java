@@ -1,18 +1,14 @@
 package com.example.date_app.controller;
 
+import com.example.date_app.dto.ProfileUpdateRequest;
 import com.example.date_app.service.FirebaseAuthService;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -45,27 +41,33 @@ public class ProfileController {
     }
 
 
-    @PostMapping("/profile")
-    public String saveProfile(
-            @RequestParam String name,
-            @RequestParam String birthdate,
-            @RequestParam(required = false) String bio,
-            RedirectAttributes redirectAttributes
-    ) {
-        String userEmail = getCurrentUserEmail();
-        if (userEmail == null) {
-            return "redirect:/login";
+    @PostMapping("/api/profile/update")
+    @ResponseBody
+    public ResponseEntity<?> updateFullProfile(@RequestBody ProfileUpdateRequest request) {
+        String email = getCurrentUserEmail();
+        if (email == null) return ResponseEntity.status(401).body("Unauthorized");
+
+        if (!request.isValid()) {
+            return ResponseEntity.badRequest().body("❌ 태그는 최대 5개 이하로 선택 가능합니다.");
         }
 
         try {
-            firebaseAuthService.saveUserProfile(userEmail, name, birthdate, bio);
-            redirectAttributes.addFlashAttribute("message", "✅ 프로필이 성공적으로 저장되었습니다");
-            return "redirect:/home";
+            firebaseAuthService.updateUserProfile(
+                    email,
+                    request.getName(),
+                    request.getBirthdate(),
+                    request.getGender(),
+                    request.getBio(),
+                    request.getMbti(),
+                    request.getTags()
+            );
+            return ResponseEntity.ok("✅ 프로필 전체 저장 완료");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "❌ 저장 실패: " + e.getMessage());
-            return "redirect:/profile";
+            return ResponseEntity.status(500).body("❌ 저장 실패: " + e.getMessage());
         }
     }
+
+
     @GetMapping("/api/profile")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> apiProfile() {
