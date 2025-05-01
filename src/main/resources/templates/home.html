@@ -15,8 +15,11 @@
     <h3>프로필 정보</h3>
     <p>이메일: <span id="userEmail"></span></p>
     <p>이름: <span id="name"></span></p>
-    <p>생년월일: <span id="birthdate"></span></p>
+    <p>성별: <span id="gender"></span></p>
+    <p>나이: <span id="birthdate"></span></p>
     <p>자기소개: <span id="bio"></span></p>
+    <p>MBTI: <span id="mbti"></span></p>
+    <p>성격 태그: <span id="tags"></span></p>
 </div>
 
 <a href="/logout" id="logout-link">로그아웃</a>
@@ -98,8 +101,15 @@
                 document.getElementById('userEmail').textContent = data.userEmail;
                 if (data.profile) {
                     document.getElementById('name').textContent = data.profile.name || '';
-                    document.getElementById('birthdate').textContent = data.profile.birthdate || '';
+                    document.getElementById('gender').textContent = data.profile.gender || '';
+                    const rawBirthdate = data.profile.birthdate || '';
+                    const age = rawBirthdate ? calculateKoreanAge(rawBirthdate) : '-';
+                    document.getElementById('birthdate').textContent = '만 ' + age + '세';
                     document.getElementById('bio').textContent = data.profile.bio || '';
+
+                    const personality = data.profile.personality || {};
+                    document.getElementById('mbti').textContent = personality.mbti || '-';
+                    document.getElementById('tags').textContent = (personality.tags || []).join(', ');
                 }
             })
             .catch(error => {
@@ -112,6 +122,24 @@
     document.getElementById('logout-link').addEventListener('click', function() {
         localStorage.removeItem('jwtToken');
     });
+
+    function calculateKoreanAge(birthdateStr) {
+        const today = new Date();
+        const birthDate = new Date(birthdateStr);
+
+        let age = today.getFullYear() - birthDate.getFullYear();
+
+        const isBirthdayPassed =
+            today.getMonth() > birthDate.getMonth() ||
+            (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
+
+        if (!isBirthdayPassed) {
+            age--;
+        }
+
+        return age;
+    }
+
 </script>
 </body>
 </html>

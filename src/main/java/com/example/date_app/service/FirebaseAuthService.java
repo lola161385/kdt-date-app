@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 @Service
@@ -38,8 +39,10 @@ public class FirebaseAuthService {
     }
 
     // 사용자 프로필 저장
-    public void saveUserProfile(String email, String name, String birthdate, String bio)
+    public void updateUserProfile(String email, String name, String birthdate, String gender, String bio, String mbti, List<String> tags)
             throws FirebaseAuthException {
+
+        if (tags.size() > 5) throw new IllegalArgumentException("태그는 최대 5개까지 선택 가능합니다.");
 
         // 사용자 UID 조회 (이메일 기반)
         UserRecord user = FirebaseAuth.getInstance().getUserByEmail(email);
@@ -56,6 +59,14 @@ public class FirebaseAuthService {
         profile.put("email", email);
         profile.put("birthdate", birthdate);
         profile.put("bio", bio);
+
+        profile.put("gender", gender);
+        Map<String, Object> personality = new HashMap<>();
+        personality.put("mbti", mbti);
+        personality.put("tags", tags);
+
+        profile.put("personality", personality);
+
 
         // 비동기 저장
         ref.setValueAsync(profile);
