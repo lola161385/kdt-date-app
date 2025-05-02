@@ -21,6 +21,7 @@ public class FirebaseConfig {
 
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                    .setDatabaseUrl("https://date-app-41a1c-default-rtdb.firebaseio.com")
                     .build();
 
             if (FirebaseApp.getApps().isEmpty()) {

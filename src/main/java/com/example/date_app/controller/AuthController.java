@@ -7,10 +7,14 @@ import com.google.firebase.auth.FirebaseToken;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import com.example.date_app.util.JwtUtil;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Controller
@@ -18,15 +22,16 @@ import java.util.Map;
 public class AuthController {
 
     private final FirebaseAuthService firebaseAuthService;
+    private final JwtUtil jwtUtil;
 
     @GetMapping("/login")
     public String loginForm() {
         return "login"; // login.html
     }
 
-    @PostMapping(value = "/api/login", consumes = "application/json", produces = "text/plain")
+    @PostMapping(value = "/api/login", consumes = "application/json", produces = "application/json")
     @ResponseBody
-    public ResponseEntity<String> loginWithToken(@RequestBody Map<String, String> body, HttpSession session) {
+    public ResponseEntity<Map<String, String>> loginWithToken(@RequestBody Map<String, String> body, HttpSession session) {
         System.out.println("🔥 로그인 요청 도착");
 
         String idToken = body.get("idToken");
@@ -34,25 +39,41 @@ public class AuthController {
 
         try {
             FirebaseToken decodedToken = firebaseAuthService.verifyIdToken(idToken);
-            session.setAttribute("userEmail", decodedToken.getEmail());
+            String email = decodedToken.getEmail();
 
-            System.out.println("✅ Firebase 인증 성공: " + decodedToken.getEmail());
-            return ResponseEntity.ok("success");
+            // JWT 발급
+            String jwt = jwtUtil.generateToken(email);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("token", jwt);
+
+            return ResponseEntity.ok(response);
         } catch (FirebaseAuthException e) {
             System.out.println("❌ Firebase 인증 실패: " + e.getMessage());
-            return ResponseEntity.status(401).body("Firebase 인증 실패: " + e.getMessage());
+            return ResponseEntity.status(401).body(Map.of("error", "Firebase 인증 실패: " + e.getMessage()));
         }
     }
 
-    @GetMapping("/home")
-    public String home(HttpSession session, Model model) {
-        String userEmail = (String) session.getAttribute("userEmail");
+    @GetMapping("/api/home")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> apiHome() {
+        String userEmail = getCurrentUserEmail();
         if (userEmail == null) {
-            return "redirect:/login?error=sessionExpired";
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
         }
-        model.addAttribute("userEmail", userEmail);
-        return "home";
+
+        try {
+            Map<String, Object> profile = firebaseAuthService.getUserProfile(userEmail);
+            Map<String, Object> result = new HashMap<>();
+            result.put("userEmail", userEmail);
+            result.put("profile", profile);
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Profile fetch failed"));
+        }
     }
+
 
 
     @GetMapping("/logout")
@@ -80,20 +101,24 @@ public class AuthController {
     }
 
     @PostMapping("/delete-account")
-    public String deleteAccount(HttpSession session, Model model) {
-        String userEmail = (String) session.getAttribute("userEmail");
+    public String deleteAccount(Model model) {
+        String userEmail = getCurrentUserEmail();
         if (userEmail == null) {
             return "redirect:/login";
         }
 
         try {
             firebaseAuthService.deleteUserByEmail(userEmail);
-            session.invalidate(); // 로그아웃 처리
             return "redirect:/login";
         } catch (FirebaseAuthException e) {
             model.addAttribute("message", "회원탈퇴 실패: " + e.getMessage());
             return "home"; // 실패 시 홈으로
         }
+    }
+
+    private String getCurrentUserEmail() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null) ? (String) auth.getPrincipal() : null;
     }
 
 }

@@ -20,7 +20,10 @@
     <button type="submit">Login</button>
 </form>
 
+<p><a href="#" id="reset-password-link">비밀번호를 잊으셨나요?</a></p>
 <p>계정이 없으신가요? <a href="/register">회원가입</a></p>
+
+<p id="message" style="color: red;"></p>
 
 <script>
     const firebaseConfig = {
@@ -36,43 +39,66 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
-    document.getElementById('login-form').addEventListener('submit', function (event) {
+    document.getElementById('login-form').addEventListener('submit', async function (event) {
         event.preventDefault();
 
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
+        const messageElement = document.getElementById('message');
 
-        console.log("📨 로그인 시도 중... 이메일:", email);
+        try {
+            console.log("📨 로그인 시도 중... 이메일:", email);
 
-        auth.signInWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-                console.log("✅ Firebase 로그인 성공:", userCredential.user.email);
-                return userCredential.user.getIdToken();
-            })
-            .then((idToken) => {
-                console.log("🪪 ID 토큰 획득 성공:", idToken.substring(0, 20) + "...");
+            const userCredential = await auth.signInWithEmailAndPassword(email, password);
+            const user = userCredential.user;
 
-                return fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ idToken: idToken }),
-                    credentials: 'include' // ✅ 서버에 쿠키 포함 보장
-                });
-            })
-            .then(response => {
-                if (response.ok) {
-                    console.log("🎉 Spring Boot 서버 로그인 성공!");
-                    location.replace('/home');
-                } else {
-                    console.error("❌ 서버 로그인 실패. 상태 코드:", response.status);
-                    return response.text().then(text => {
-                        throw new Error("서버 응답 오류: " + text);
-                    });
-                }
+            // ✅ 이메일 인증 여부 확인
+            if (!user.emailVerified) {
+                await auth.signOut(); // 인증 안된 유저는 강제 로그아웃
+                messageElement.textContent = "❌ 이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.";
+                return;
+            }
+
+            console.log("✅ Firebase 로그인 성공:", user.email);
+
+            const idToken = await user.getIdToken();
+            console.log("🪪 ID 토큰 획득 성공:", idToken.substring(0, 20) + "...");
+
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({idToken: idToken}),
+                credentials: 'include' // 쿠키를 함께 보낸다 (만약 필요한 경우)
+            });
+
+            if (!response.ok) {
+                const errorMsg = await response.text();
+                throw new Error(errorMsg);
+            }
+
+            const data = await response.json();
+            const token = data.token;
+            localStorage.setItem('jwtToken', token);
+
+            location.replace('/home');
+
+        } catch (error) {
+            console.error('로그인 실패:', error);
+            messageElement.textContent = "❌ 로그인 실패: " + (error.message || '오류 발생');
+        }
+    });
+
+    document.getElementById('reset-password-link').addEventListener('click', function () {
+        const email = prompt("비밀번호 재설정 메일을 받을 이메일을 입력하세요:");
+        if (!email) return;
+
+        firebase.auth().sendPasswordResetEmail(email)
+            .then(() => {
+                alert("✅ 비밀번호 재설정 이메일을 보냈습니다. 이메일을 확인해주세요.");
             })
             .catch(error => {
-                console.error('🚨 로그인 에러 발생:', error);
-                alert('로그인 실패: ' + error.message);
+                console.error("❌ 비밀번호 재설정 실패:", error);
+                alert("❌ " + (error.message || "비밀번호 재설정 중 오류 발생"));
             });
     });
 </script>
