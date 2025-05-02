@@ -55,17 +55,16 @@ jobs:
             echo "=== Current directory ==="
             pwd
             echo "=== Stopping existing app ==="
-            cd /home/ubuntu/app/build/libs
+            cd /home/***/app/build/libs
             pkill -f 'app.jar' || true
+            sleep 2
             echo "=== Starting new app ==="
-            cd /home/ubuntu/app/build/libs
-            nohup java -jar app.jar > app.log 2>&1 &
-            echo "=== Process status ==="
+            nohup java -jar app.jar > app.log 2>&1 & disown
             sleep 3
+            echo "=== Process status ==="
             ps aux | grep app.jar
             echo "=== Recent logs ==="
             tail -n 20 app.log
-
 
 
     # NOTE: The Gradle Wrapper is the default and recommended way to run Gradle (https://docs.gradle.org/current/userguide/gradle_wrapper.html).
