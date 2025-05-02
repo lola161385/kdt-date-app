@@ -55,9 +55,10 @@ jobs:
             echo "=== Current directory ==="
             pwd
             echo "=== Stopping existing app ==="
+            cd /home/ubuntu/app/build/libs
             pkill -f 'app.jar' || true
             echo "=== Starting new app ==="
-            cd /home/ubuntu/app
+            cd /home/ubuntu/app/build/libs
             nohup java -jar app.jar > app.log 2>&1 &
             echo "=== Process status ==="
             sleep 3
