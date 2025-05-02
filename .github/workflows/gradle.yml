@@ -22,28 +22,27 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # firebase-service-account.json 복원
+      # firebase-service-account.json 복원 (빌드 산출물 폴더로)
       - name: Restore firebase config
         run: |
-          mkdir -p src/main/resources
-          echo "${{ secrets.FIREBASE_JSON }}" | base64 -d > src/main/resources/firebase-service-account.json
+          mkdir -p build/libs
+          echo "${{ secrets.FIREBASE_JSON }}" | base64 -d > build/libs/firebase-service-account.json
 
-      # 빌드 전 clean 추가 및 단일 JAR 생성
       - name: Build with Gradle
         run: ./gradlew clean build
 
-      # 명시적 JAR 파일 전송 (app.jar)
-      - name: Deploy JAR
+      # app.jar를 서버로 복사 (build/libs 전체)
+      - name: Deploy JAR and config
         uses: appleboy/scp-action@v0.1.0
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
-          source: "build/libs/app.jar"
-          target: "/home/ubuntu/app/"
+          source: "build/libs/*"
+          target: "/home/ubuntu/app/build/libs/"
 
-      # 정확한 JAR 이름으로 재시작
+      # 정확한 경로에서 재시작
       - name: Restart Application
         uses: appleboy/ssh-action@v0.1.10
         with:
@@ -52,10 +51,8 @@ jobs:
           key: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            echo "=== Current directory ==="
-            pwd
+            cd /home/ubuntu/app/build/libs
             echo "=== Stopping existing app ==="
-            cd /home/***/app/build/libs
             pkill -f 'app.jar' || true
             sleep 2
             echo "=== Starting new app ==="
