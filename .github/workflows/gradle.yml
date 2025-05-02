@@ -51,7 +51,7 @@ jobs:
           key: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            cd /home/ubuntu/app
+            cd /home/ubuntu/app/build/libs
             echo "=== Stopping existing app ==="
             PID=$(jps -l | grep 'app.jar' | awk '{print $1}')
             if [ ! -z "$PID" ]; then
