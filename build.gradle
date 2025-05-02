@@ -49,7 +49,7 @@ sourceSets {
 	main {
 		resources {
 			srcDirs = ['src/main/resources']
-			includes = ['**/*.json', '**/*.properties']
+			includes = ['**/*.json', '**/*.properties', '**/*.html']
 		}
 	}
 }
