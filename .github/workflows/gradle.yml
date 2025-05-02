@@ -22,16 +22,16 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # firebase-service-account.json 복원 (빌드 산출물 폴더로)
+      # 1. src/main/resources에 JSON 복원
       - name: Restore firebase config
         run: |
-          mkdir -p build/libs
-          echo "${{ secrets.FIREBASE_JSON }}" | base64 -d > build/libs/firebase-service-account.json
+          mkdir -p src/main/resources
+          echo "${{ secrets.FIREBASE_JSON }}" | base64 -d > src/main/resources/firebase-service-account.json
 
       - name: Build with Gradle
         run: ./gradlew clean build
 
-      # app.jar를 서버로 복사 (build/libs 전체)
+      # 2. app.jar + JSON 복사 (필요시)
       - name: Deploy JAR and config
         uses: appleboy/scp-action@v0.1.0
         with:
@@ -42,7 +42,7 @@ jobs:
           source: "build/libs/app.jar"
           target: "/home/ubuntu/app/"
 
-      # 정확한 경로에서 재시작
+      # 3. 서버 재시작
       - name: Restart Application
         uses: appleboy/ssh-action@v0.1.10
         with:
@@ -51,9 +51,8 @@ jobs:
           key: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            cd /home/ubuntu/app/build/libs
+            cd /home/ubuntu/app
             echo "=== Stopping existing app ==="
-            # jps로 PID 찾아서 kill
             PID=$(jps -l | grep 'app.jar' | awk '{print $1}')
             if [ ! -z "$PID" ]; then
               echo "Killing PID: $PID"
@@ -62,11 +61,12 @@ jobs:
             sleep 2
             echo "=== Starting new app ==="
             nohup java -jar app.jar > app.log 2>&1 & disown
-            sleep 3
+            sleep 5
             echo "=== Process status ==="
             jps -ml
             echo "=== Recent logs ==="
             tail -n 20 app.log
+
 
     # NOTE: The Gradle Wrapper is the default and recommended way to run Gradle (https://docs.gradle.org/current/userguide/gradle_wrapper.html).
     # If your project does not have the Gradle Wrapper configured, you can use the following configuration to run Gradle with a specified version.
