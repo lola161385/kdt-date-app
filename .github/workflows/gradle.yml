@@ -53,13 +53,20 @@ jobs:
           script: |
             cd /home/ubuntu/app/build/libs
             echo "=== Stopping existing app ==="
-            pkill -f 'app.jar' || true
+            # jps로 PID 찾아서 kill
+            PID=$(jps -l | grep 'app.jar' | awk '{print $1}')
+            if [ ! -z "$PID" ]; then
+              echo "Killing PID: $PID"
+              kill -9 $PID
+            fi
             sleep 2
             echo "=== Starting new app ==="
             nohup java -jar app.jar > app.log 2>&1 & disown
             sleep 3
             echo "=== Process status ==="
-
+            jps -ml
+            echo "=== Recent logs ==="
+            tail -n 20 app.log
 
     # NOTE: The Gradle Wrapper is the default and recommended way to run Gradle (https://docs.gradle.org/current/userguide/gradle_wrapper.html).
     # If your project does not have the Gradle Wrapper configured, you can use the following configuration to run Gradle with a specified version.
