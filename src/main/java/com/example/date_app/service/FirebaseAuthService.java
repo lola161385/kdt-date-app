@@ -101,4 +101,51 @@ public class FirebaseAuthService {
         return result[0];
     }
 
+    public void createInitialUserProfile(String email) throws FirebaseAuthException {
+        UserRecord user = getUserByEmail(email);
+        String uid = user.getUid();
+
+        DatabaseReference ref = FirebaseDatabase.getInstance()
+                .getReference("users")
+                .child(uid);
+
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("email", email);
+        profile.put("name", "");
+        profile.put("birthdate", "");
+        profile.put("bio", "");
+        profile.put("gender", "");
+        profile.put("personality", Map.of("mbti", "", "tags", List.of()));
+
+        ref.setValueAsync(profile);
+    }
+
+    public boolean userProfileExists(String email) throws FirebaseAuthException, InterruptedException {
+        UserRecord user = getUserByEmail(email);
+        String uid = user.getUid();
+
+        DatabaseReference ref = FirebaseDatabase.getInstance()
+                .getReference("users")
+                .child(uid);
+
+        final boolean[] exists = {false};
+        CountDownLatch latch = new CountDownLatch(1);
+
+        ref.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                exists[0] = snapshot.exists();
+                latch.countDown();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                latch.countDown();
+            }
+        });
+
+        latch.await();
+        return exists[0];
+    }
+
 }
