@@ -41,7 +41,18 @@ public class AuthController {
             FirebaseToken decodedToken = firebaseAuthService.verifyIdToken(idToken);
             String email = decodedToken.getEmail();
 
-            // JWT 발급
+            try {
+                // 🔐 프로필 없으면 기본 생성
+                if (!firebaseAuthService.userProfileExists(email)) {
+                    firebaseAuthService.createInitialUserProfile(email);
+                    System.out.println("🌱 기본 프로필 자동 생성 완료");
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ 프로필 자동 생성 중 오류 발생: " + e.getMessage());
+                e.printStackTrace(); // 디버깅을 위해 예외 스택 출력
+            }
+
+            // ✅ JWT 발급
             String jwt = jwtUtil.generateToken(email);
 
             Map<String, String> response = new HashMap<>();
@@ -53,6 +64,7 @@ public class AuthController {
             return ResponseEntity.status(401).body(Map.of("error", "Firebase 인증 실패: " + e.getMessage()));
         }
     }
+
 
     @GetMapping("/api/home")
     @ResponseBody
@@ -93,6 +105,7 @@ public class AuthController {
                                  Model model) {
         try {
             firebaseAuthService.registerUser(email, password);
+            firebaseAuthService.createInitialUserProfile(email); // 🔥 이 줄 추가
             return "redirect:/login";
         } catch (FirebaseAuthException e) {
             model.addAttribute("message", "회원가입 실패: " + e.getMessage());
