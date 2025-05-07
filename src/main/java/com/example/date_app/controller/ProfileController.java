@@ -10,7 +10,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -19,8 +19,9 @@ public class ProfileController {
 
     private final FirebaseAuthService firebaseAuthService;
 
+    // [1] 프로필 조회 페이지 (기존 home.html → profile.html로 사용)
     @GetMapping("/profile")
-    public String profileForm(Model model) {
+    public String viewProfile(Model model) {
         String userEmail = getCurrentUserEmail();
         if (userEmail == null) {
             return "redirect:/login";
@@ -29,18 +30,29 @@ public class ProfileController {
         try {
             Map<String, Object> profile = firebaseAuthService.getUserProfile(userEmail);
             if (profile != null) {
-                // null 체크 추가
                 model.addAttribute("name", profile.getOrDefault("name", ""));
                 model.addAttribute("birthdate", profile.getOrDefault("birthdate", ""));
                 model.addAttribute("bio", profile.getOrDefault("bio", ""));
+                model.addAttribute("gender", profile.getOrDefault("gender", ""));
+
+                Map<String, Object> personality = (Map<String, Object>) profile.getOrDefault("personality", Map.of());
+                model.addAttribute("mbti", personality.getOrDefault("mbti", ""));
+                model.addAttribute("tags", personality.getOrDefault("tags", List.of()));
             }
         } catch (Exception e) {
             model.addAttribute("error", "프로필 조회 실패: " + e.getMessage());
         }
-        return "profile";
+
+        return "profile"; // ✅ 여기서 이제 profile.html을 렌더링
     }
 
+    // [2] 프로필 수정 페이지 (기존 profile.html → profileEdit.html로 이동)
+    @GetMapping("/profile/edit")
+    public String editProfilePage() {
+        return "profileEdit"; // ✅ 수정용 html
+    }
 
+    // [3] 프로필 수정 API
     @PostMapping("/api/profile/update")
     @ResponseBody
     public ResponseEntity<?> updateFullProfile(@RequestBody ProfileUpdateRequest request) {
@@ -67,7 +79,7 @@ public class ProfileController {
         }
     }
 
-
+    // [4] API: 프로필 데이터 조회 (React 등에서 사용 가능)
     @GetMapping("/api/profile")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> apiProfile() {
@@ -78,11 +90,7 @@ public class ProfileController {
 
         try {
             Map<String, Object> profile = firebaseAuthService.getUserProfile(userEmail);
-            Map<String, Object> result = new HashMap<>();
-            result.put("userEmail", userEmail);
-            result.put("profile", profile);
-
-            return ResponseEntity.ok(result);
+            return ResponseEntity.ok(Map.of("userEmail", userEmail, "profile", profile));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", "Profile fetch failed"));
         }
@@ -92,5 +100,4 @@ public class ProfileController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return (auth != null) ? (String) auth.getPrincipal() : null;
     }
-
 }

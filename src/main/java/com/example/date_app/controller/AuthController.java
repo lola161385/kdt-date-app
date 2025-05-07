@@ -125,7 +125,7 @@ public class AuthController {
             return "redirect:/login";
         } catch (FirebaseAuthException e) {
             model.addAttribute("message", "회원탈퇴 실패: " + e.getMessage());
-            return "home"; // 실패 시 홈으로
+            return "profile"; // 실패 시 홈으로
         }
     }
 
