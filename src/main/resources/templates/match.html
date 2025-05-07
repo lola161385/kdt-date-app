@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>매칭 추천</title>
+  <meta charset="UTF-8">
+  <style>
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 1rem;
+      margin: 1rem 0;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .card h3 {
+      margin: 0.5rem 0;
+    }
+
+    .tag {
+      display: inline-block;
+      background-color: #f0f0f0;
+      border-radius: 8px;
+      padding: 0.2rem 0.5rem;
+      margin: 0.2rem;
+      font-size: 0.9rem;
+    }
+
+    .button {
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+<h2>매칭 추천 목록</h2>
+
+<div id="recommendation-list"></div>
+
+<a href="/profile">내 프로필로</a>
+
+<script>
+  const token = localStorage.getItem('jwtToken');
+  console.log("JWT Token:", token);
+
+  if (!token) {
+    alert("로그인이 필요합니다.");
+    window.location.href = "/login";
+  }
+
+  fetch('/api/match/recommendations', {
+    method: 'GET',
+    headers: {
+      'Authorization': 'Bearer ' + token
+    }
+  })
+          .then(res => {
+            if (!res.ok) {
+              // 이때 HTML (예: 로그인 페이지) 이 반환될 수 있음
+              throw new Error("인증 실패 또는 서버 오류");
+            }
+            return res.json();
+          })
+          .then(data => {
+            const container = document.getElementById('recommendation-list');
+
+            if (!data.length) {
+              container.innerHTML = '<p>추천 대상이 없습니다 😥</p>';
+              return;
+            }
+
+            data.forEach(user => {
+              const card = document.createElement('div');
+              card.className = 'card';
+
+              card.innerHTML = `
+      <h3>${user.name} (${user.mbti})</h3>
+      <p>공통 태그: ${user.commonTags.map(tag => `<span class="tag">${tag}</span>`).join('')}</p>
+      <p>매칭 점수: <strong>${user.score}</strong></p>
+      <button class="button" onclick="alert('💌 기능 준비 중입니다')">요청 보내기</button>
+    `;
+
+              container.appendChild(card);
+            });
+          })
+          .catch(err => {
+            console.error("매칭 추천 에러:", err);
+            alert("추천 데이터를 불러오는 중 오류가 발생했습니다.");
+          });
+
+</script>
+</body>
+</html>

@@ -80,7 +80,17 @@
             const token = data.token;
             localStorage.setItem('jwtToken', token);
 
-            location.replace('/home');
+            const homeResponse = await fetch('/home', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (homeResponse.ok) {
+                location.replace('/home');
+            } else {
+                messageElement.textContent = "❌ 홈 접근 실패: 인증 오류";
+            }
 
         } catch (error) {
             console.error('로그인 실패:', error);

@@ -7,13 +7,16 @@ import com.google.firebase.auth.FirebaseToken;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import com.example.date_app.util.JwtUtil;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,7 +29,7 @@ public class AuthController {
 
     @GetMapping("/login")
     public String loginForm() {
-        return "login"; // login.html
+        return "login";
     }
 
     @PostMapping(value = "/api/login", consumes = "application/json", produces = "application/json")
@@ -41,30 +44,28 @@ public class AuthController {
             FirebaseToken decodedToken = firebaseAuthService.verifyIdToken(idToken);
             String email = decodedToken.getEmail();
 
-            try {
-                // 🔐 프로필 없으면 기본 생성
-                if (!firebaseAuthService.userProfileExists(email)) {
-                    firebaseAuthService.createInitialUserProfile(email);
-                    System.out.println("🌱 기본 프로필 자동 생성 완료");
-                }
-            } catch (Exception e) {
-                System.err.println("⚠️ 프로필 자동 생성 중 오류 발생: " + e.getMessage());
-                e.printStackTrace(); // 디버깅을 위해 예외 스택 출력
+            if (!firebaseAuthService.userProfileExists(email)) {
+                firebaseAuthService.createInitialUserProfile(email);
+                System.out.println("🌱 기본 프로필 자동 생성 완료");
             }
 
-            // ✅ JWT 발급
             String jwt = jwtUtil.generateToken(email);
 
-            Map<String, String> response = new HashMap<>();
-            response.put("token", jwt);
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(
+                            email,
+                            null,
+                            Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+                    );
+            SecurityContextHolder.getContext().setAuthentication(auth);
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of("token", jwt));
+
         } catch (FirebaseAuthException e) {
             System.out.println("❌ Firebase 인증 실패: " + e.getMessage());
             return ResponseEntity.status(401).body(Map.of("error", "Firebase 인증 실패: " + e.getMessage()));
         }
     }
-
 
     @GetMapping("/api/home")
     @ResponseBody
@@ -76,17 +77,14 @@ public class AuthController {
 
         try {
             Map<String, Object> profile = firebaseAuthService.getUserProfile(userEmail);
-            Map<String, Object> result = new HashMap<>();
-            result.put("userEmail", userEmail);
-            result.put("profile", profile);
-
-            return ResponseEntity.ok(result);
+            return ResponseEntity.ok(Map.of(
+                    "userEmail", userEmail,
+                    "profile", profile
+            ));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", "Profile fetch failed"));
         }
     }
-
-
 
     @GetMapping("/logout")
     public String logout(HttpSession session) {
@@ -105,7 +103,7 @@ public class AuthController {
                                  Model model) {
         try {
             firebaseAuthService.registerUser(email, password);
-            firebaseAuthService.createInitialUserProfile(email); // 🔥 이 줄 추가
+            firebaseAuthService.createInitialUserProfile(email);
             return "redirect:/login";
         } catch (FirebaseAuthException e) {
             model.addAttribute("message", "회원가입 실패: " + e.getMessage());
@@ -125,7 +123,7 @@ public class AuthController {
             return "redirect:/login";
         } catch (FirebaseAuthException e) {
             model.addAttribute("message", "회원탈퇴 실패: " + e.getMessage());
-            return "profile"; // 실패 시 홈으로
+            return "profile";
         }
     }
 
@@ -133,5 +131,4 @@ public class AuthController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return (auth != null) ? (String) auth.getPrincipal() : null;
     }
-
 }
