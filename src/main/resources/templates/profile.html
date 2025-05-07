@@ -22,10 +22,12 @@
     <p>성격 태그: <span id="tags"></span></p>
 </div>
 
-<a href="/logout" id="logout-link">로그아웃</a>
-<a href="/profile/edit"><button type="button">프로필 수정하기</button></a>
+<a href="/home">
+    <button type="button" style="margin-top: 1rem;">홈으로</button>
+</a>
+<a href="/profile/edit" style="margin-top: 1rem;"><button type="button">프로필 수정하기</button></a>
 <button type="button" id="delete-account" style="margin-top: 1rem;">회원탈퇴</button>
-
+<a href="/logout" id="logout-link">로그아웃</a>
 
 <script>
     const firebaseConfig = {

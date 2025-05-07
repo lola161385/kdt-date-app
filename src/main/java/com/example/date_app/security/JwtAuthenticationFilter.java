@@ -26,12 +26,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        String path = request.getRequestURI();
+        if (path.startsWith("/api/login")) {
+            // 로그인 요청은 필터 제외
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
             try {
                 String email = jwtUtil.validateAndGetEmail(token);
+                System.out.println("✅ JWT 인증 성공 - 사용자 이메일: " + email);
 
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(
@@ -41,10 +48,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         );
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (Exception e) {
-                // 유효하지 않은 경우 무시하고 진행
+                System.out.println("❌ JWT 인증 실패: " + e.getMessage());
+                // 인증 실패하더라도 필터는 계속 진행
             }
         }
 
         filterChain.doFilter(request, response);
     }
+
 }
