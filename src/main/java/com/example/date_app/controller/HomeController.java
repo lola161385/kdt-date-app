@@ -9,6 +9,6 @@ public class HomeController {
 
     @GetMapping("/home")
     public String homePage() {
-        return "home"; // templates/home.html을 렌더링
+        return "home";
     }
 }

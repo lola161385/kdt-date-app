@@ -1,67 +1,31 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>프로필 관리</title>
+    <title>홈</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 </head>
 <body>
-<h2>프로필 관리</h2>
+<h2>프로필 페이지</h2>
 
 <div id="message"></div>
 
-<!-- 프로필 폼 -->
-<form id="profile-form" style="display:none;">
-    <label>이름:
-        <input type="text" id="name" name="name" required>
-    </label><br>
+<div id="profile-section" style="display:none;">
+    <h3>프로필 정보</h3>
+    <p>이메일: <span id="userEmail"></span></p>
+    <p>이름: <span id="name"></span></p>
+    <p>성별: <span id="gender"></span></p>
+    <p>나이: <span id="birthdate"></span></p>
+    <p>자기소개: <span id="bio"></span></p>
+    <p>MBTI: <span id="mbti"></span></p>
+    <p>성격 태그: <span id="tags"></span></p>
+</div>
 
-    <label>성별:
-        <select id="gender" name="gender" required>
-            <option value="">선택하세요</option>
-            <option value="남자">남자</option>
-            <option value="여자">여자</option>
-        </select>
-    </label><br>
+<a href="/logout" id="logout-link">로그아웃</a>
+<a href="/profile/edit"><button type="button">프로필 수정하기</button></a>
+<button type="button" id="delete-account" style="margin-top: 1rem;">회원탈퇴</button>
 
-    <label>생년월일:
-        <input type="date" id="birthdate" name="birthdate" required>
-    </label><br>
-
-    <label>자기소개:
-        <textarea id="bio" name="bio"></textarea>
-    </label><br>
-
-    <label>MBTI:
-        <select id="mbti" required>
-            <option value="">선택하세요</option>
-            <option>INTJ</option><option>INTP</option><option>ENTJ</option><option>ENTP</option>
-            <option>INFJ</option><option>INFP</option><option>ENFJ</option><option>ENFP</option>
-            <option>ISTJ</option><option>ISFJ</option><option>ESTJ</option><option>ESFJ</option>
-            <option>ISTP</option><option>ISFP</option><option>ESTP</option><option>ESFP</option>
-        </select>
-    </label><br>
-
-    <h3>성격 태그 (최대 5개 선택)</h3>
-    <div id="tags">
-        <button type="button" class="tag-btn">긍정적</button>
-        <button type="button" class="tag-btn">창의적</button>
-        <button type="button" class="tag-btn">감성적</button>
-        <button type="button" class="tag-btn">성실함</button>
-        <button type="button" class="tag-btn">도전적</button>
-        <button type="button" class="tag-btn">예술가</button>
-        <button type="button" class="tag-btn">낙천적</button>
-        <button type="button" class="tag-btn">배려심</button>
-        <button type="button" class="tag-btn">신중함</button>
-        <button type="button" class="tag-btn">열정적</button>
-    </div><br>
-
-    <button type="button" id="save-all">전체 저장하기</button>
-</form>
-
-<a href="/home">홈으로</a>
-
-<button id="reset-password-auth">비밀번호 변경 메일 보내기</button>
 
 <script>
     const firebaseConfig = {
@@ -74,14 +38,53 @@
         measurementId: "G-EBTEFW9PDH"
     };
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const database = firebase.database();
+
+    document.getElementById('delete-account').addEventListener('click', async function() {
+        if (!confirm('정말 탈퇴하시겠습니까? 탈퇴하면 복구할 수 없습니다.')) {
+            return;
+        }
+
+        try {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('로그인이 필요합니다.');
+                location.replace('/login');
+                return;
+            }
+
+            const uid = user.uid;
+
+            // ✅ 1. Realtime Database에서 사용자 데이터 삭제
+            await database.ref('users/' + uid).remove();
+            console.log("🗑️ Realtime Database 사용자 데이터 삭제 완료");
+
+            // ✅ 2. Firebase Authentication에서 계정 삭제
+            await user.delete();
+            console.log("✅ Firebase Authentication 사용자 삭제 완료");
+
+            alert('✅ 회원탈퇴가 완료되었습니다.');
+            location.replace('/login');
+        } catch (error) {
+            console.error('회원탈퇴 실패:', error);
+
+            if (error.code === 'auth/requires-recent-login') {
+                alert('❗ 최근 인증이 필요합니다. 다시 로그인 후 탈퇴해주세요.');
+                await auth.signOut();
+                location.replace('/login');
+            } else {
+                alert('회원탈퇴 중 오류가 발생했습니다: ' + (error.message || ''));
+            }
+        }
+    });
 
     const token = localStorage.getItem('jwtToken');
-    const selectedTags = new Set();
 
     if (!token) {
         window.location.href = '/login';
     } else {
-        fetch('/api/profile', {
+        fetch('/api/home', {
             method: 'GET',
             headers: {
                 'Authorization': 'Bearer ' + token
@@ -94,25 +97,20 @@
                 return response.json();
             })
             .then(data => {
-                document.getElementById('profile-form').style.display = 'block';
-                const profile = data.profile || {};
-                document.getElementById('name').value = data.profile.name || '';
-                document.getElementById('gender').value = profile.gender || '';
-                document.getElementById('birthdate').value = data.profile.birthdate || '';
-                document.getElementById('bio').value = data.profile.bio || '';
+                document.getElementById('profile-section').style.display = 'block';
+                document.getElementById('userEmail').textContent = data.userEmail;
+                if (data.profile) {
+                    document.getElementById('name').textContent = data.profile.name || '';
+                    document.getElementById('gender').textContent = data.profile.gender || '';
+                    const rawBirthdate = data.profile.birthdate || '';
+                    const age = rawBirthdate ? calculateKoreanAge(rawBirthdate) : '-';
+                    document.getElementById('birthdate').textContent = '만 ' + age + '세';
+                    document.getElementById('bio').textContent = data.profile.bio || '';
 
-                const personality = profile.personality || {};
-                document.getElementById('mbti').value = personality.mbti || '';
-
-                const tags = new Set(personality.tags || []);
-                document.querySelectorAll('.tag-btn').forEach(btn => {
-                    const value = btn.textContent;
-                    if (tags.has(value)) {
-                        selectedTags.add(value);
-                        btn.style.backgroundColor = '#aaa';
-                    }
-                });
-
+                    const personality = data.profile.personality || {};
+                    document.getElementById('mbti').textContent = personality.mbti || '-';
+                    document.getElementById('tags').textContent = (personality.tags || []).join(', ');
+                }
             })
             .catch(error => {
                 console.error(error);
@@ -121,71 +119,27 @@
             });
     }
 
-    document.querySelectorAll('.tag-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const value = btn.textContent;
-            if (selectedTags.has(value)) {
-                selectedTags.delete(value);
-                btn.style.backgroundColor = '';
-            } else {
-                if (selectedTags.size >= 5) {
-                    alert('태그는 최대 5개까지 선택 가능합니다.');
-                    return;
-                }
-                selectedTags.add(value);
-                btn.style.backgroundColor = '#aaa';
-            }
-        });
+    document.getElementById('logout-link').addEventListener('click', function() {
+        localStorage.removeItem('jwtToken');
     });
 
-    document.getElementById('save-all').addEventListener('click', () => {
-        const name = document.getElementById('name').value;
-        const gender = document.getElementById('gender').value;
-        const birthdate = document.getElementById('birthdate').value;
-        const bio = document.getElementById('bio').value;
-        const mbti = document.getElementById('mbti').value;
-        const tags = Array.from(selectedTags);
+    function calculateKoreanAge(birthdateStr) {
+        const today = new Date();
+        const birthDate = new Date(birthdateStr);
 
-        if (!name || !gender || !birthdate || !mbti) {
-            alert("이름, 성별, 생년월일, MBTI는 필수입니다.");
-            return;
+        let age = today.getFullYear() - birthDate.getFullYear();
+
+        const isBirthdayPassed =
+            today.getMonth() > birthDate.getMonth() ||
+            (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
+
+        if (!isBirthdayPassed) {
+            age--;
         }
 
-        fetch('/api/profile/update', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify({ name, gender, birthdate, bio, mbti, tags })
-        })
-            .then(response => response.text())
-            .then(msg => {
-                alert(msg);
-                window.location.href = "/home";
-            })
-            .catch(err => alert('❌ 저장 실패: ' + err.message));
-    });
+        return age;
+    }
 
-    document.getElementById('reset-password-auth').addEventListener('click', function () {
-        const user = firebase.auth().currentUser;
-
-        if (!user) {
-            alert("❗ 로그인 상태가 아닙니다.");
-            return;
-        }
-
-        const email = user.email;
-
-        firebase.auth().sendPasswordResetEmail(email)
-            .then(() => {
-                alert("✅ 비밀번호 변경 링크를 이메일로 보냈습니다.");
-            })
-            .catch(error => {
-                console.error("❌ 비밀번호 변경 실패:", error);
-                alert("❌ " + (error.message || "비밀번호 변경 중 오류 발생"));
-            });
-    });
 </script>
 </body>
 </html>
