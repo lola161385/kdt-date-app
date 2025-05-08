@@ -2,6 +2,7 @@
 
 **Date App**은 소개팅을 위한 사용자 연결 애플리케이션입니다. Firebase와 Spring Boot를 활용하여 회원가입부터 매칭 서비스까지 다양한 기능을 제공합니다.
 성격키워드, mbti, 선호하는 사람(키워드)를 입력받아 AI자기소개글 자동 생성 기능을 제공합니다.
+CI/CD 파이프라인을 사용하여 자동화된 코드 검증, 빌드, 배포가 이루어집니다.
 
 ---
 
@@ -38,6 +39,9 @@
   - 모든 API 요청은 JWT 토큰을 통해 인증 처리.
 - **글로벌 예외 처리**
   - 통일된 에러 메시지 출력 및 HTTP 상태 관리.
+ 
+### 5. **CI/CD 파이프라인** ⚙️🚀
+- GitHub Actions를 사용한 자동화된 빌드 및 배포.
 
 ---
 
@@ -88,6 +92,12 @@
 - **JavaScript**
   - Firebase SDK를 이용한 인증 흐름 관리.
   - AJAX를 활용한 비동기 API 통신.
+
+### CI/CD 관련 도구
+| 도구                   | 설명                                         |
+|----------------------|--------------------------------------------|
+| **GitHub Actions**   | 코드 변경에 따른 이벤트 트리거 및 모든 워크플로우 관리.          |
+| **Gradle**           | 빌드 및 의존성 관리 도구로 프로젝트의 생명주기 제어.             |
 
 ---
 
@@ -152,18 +162,41 @@
 
 ---
 
+## 🚀 CI/CD 파이프라인
+
+### ⚙️ CI/CD 구성
+이 프로젝트는 GitHub Actions를 기반으로 다음 프로세스를 포함한 CI/CD 파이프라인을 구현하고 있습니다.
+
+1. **Git 이벤트 트리거**
+   - `master` 브랜치에 `push` 또는 `pull_request` 발생 시 자동 실행.
+
+2. **빌드 및 테스트**
+   - Gradle을 이용한 프로젝트 빌드 및 의존성 관리.
+   - `./gradlew clean build` 명령어로 애플리케이션을 빌드.
+
+3. **Firebase 설정**
+   - Firebase 서비스 계정 키(`firebase-service-account.json`)를 GitHub Secret에 인코딩된 형태로 저장.
+   - CI 실행 시 JSON 파일을 복원하여 Firebase와 통신 가능하도록 설정.
+
+4. **배포**
+   - Gradle 빌드를 통해 생성된 `.jar` 파일을 원격 서버로 전송.
+   - 기존 애플리케이션을 종료하고 새 애플리케이션을 백그라운드에서 시작.
+   - 서버 로그를 통해 배포 상태를 확인.
+
+5. **환경변수 설정**
+   - GitHub Secret에서 환경변수를 추출하여 서버 환경에 자동 주입.
+ 
+---
+
 ## 🚀 실행 방법
 
-1. Firebase 설정
-   - Firebase 프로젝트 생성 후 `firebase-service-account.json` 다운로드.
-   - `src/main/resources/firebase/` 디렉토리에 해당 파일 추가.
+1. **코드 변경**: 개발자가 `master` 브랜치로 푸시하거나 Pull Request 생성.
+2. **CI 실행**: 
+   - GitHub Actions가 빌드 및 배포를 트리거.
+   - Gradle 빌드 이후 결과물 `.jar` 파일을 생성.
+3. **배포 및 재시작**: Remote 서버에 최신 버전 `.jar` 파일 업로드 및 애플리케이션 재시작.
+4. **상태 확인**: 서버 로그(`/home/ubuntu/app/app.log`)로 최신 상태 확인 가능.
 
-2. 프로젝트 실행
-   - `application.properties` 내 Firebase 설정 경로 확인.
-   - **Spring Boot** 실행:
-     ```bash
-     ./mvnw spring-boot:run
-     ```
    - 브라우저에서 [http://210.109.54.109:8080](http://210.109.54.109:8080) 접속.
 ---
 
