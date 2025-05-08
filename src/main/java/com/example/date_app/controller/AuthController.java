@@ -44,8 +44,10 @@ public class AuthController {
             FirebaseToken decodedToken = firebaseAuthService.verifyIdToken(idToken);
             String email = decodedToken.getEmail();
 
+            boolean isNewUser = false;
             if (!firebaseAuthService.userProfileExists(email)) {
                 firebaseAuthService.createInitialUserProfile(email);
+                isNewUser = true;
                 System.out.println("🌱 기본 프로필 자동 생성 완료");
             }
 
@@ -59,8 +61,10 @@ public class AuthController {
                     );
             SecurityContextHolder.getContext().setAuthentication(auth);
 
-            return ResponseEntity.ok(Map.of("token", jwt));
-
+            return ResponseEntity.ok(Map.of(
+                    "token", jwt,
+                    "newUser", String.valueOf(isNewUser)
+            ));
         } catch (FirebaseAuthException e) {
             System.out.println("❌ Firebase 인증 실패: " + e.getMessage());
             return ResponseEntity.status(401).body(Map.of("error", "Firebase 인증 실패: " + e.getMessage()));

@@ -10,7 +10,7 @@
 </head>
 <body>
 <h2>Login</h2>
-<form id="login-form">
+<form id="login-form" style="display: none;">
     <label for="email">Email:</label>
     <input type="email" id="email" required>
     <br>
@@ -19,6 +19,10 @@
     <br>
     <button type="submit">Login</button>
 </form>
+
+<button id="show-email-login">이메일로 로그인</button>
+<br><br>
+<button id="google-login">Google로 로그인</button>
 
 <p><a href="#" id="reset-password-link">비밀번호를 잊으셨나요?</a></p>
 <p>계정이 없으신가요? <a href="/register">회원가입</a></p>
@@ -39,6 +43,13 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
+    // 이메일 로그인 폼 보여주는 버튼 이벤트
+    document.getElementById('show-email-login').addEventListener('click', () => {
+        const form = document.getElementById('login-form');
+        form.style.display = 'block'; // 보여주기
+        document.getElementById('show-email-login').style.display = 'none'; // 버튼 숨기기
+    });
+
     document.getElementById('login-form').addEventListener('submit', async function (event) {
         event.preventDefault();
 
@@ -53,7 +64,7 @@
             const user = userCredential.user;
 
             // ✅ 이메일 인증 여부 확인
-            if (!user.emailVerified) {
+            if (!user.emailVerified && !user.providerData[0].providerId.includes('google.com')) {
                 await auth.signOut(); // 인증 안된 유저는 강제 로그아웃
                 messageElement.textContent = "❌ 이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.";
                 return;
@@ -78,18 +89,13 @@
 
             const data = await response.json();
             const token = data.token;
+            const isNewUser = data.newUser === 'true';
             localStorage.setItem('jwtToken', token);
 
-            const homeResponse = await fetch('/home', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (homeResponse.ok) {
-                location.replace('/home');
+            if (isNewUser) {
+                location.replace('/profile/edit');
             } else {
-                messageElement.textContent = "❌ 홈 접근 실패: 인증 오류";
+                location.replace('/home');
             }
 
         } catch (error) {
@@ -110,6 +116,45 @@
                 console.error("❌ 비밀번호 재설정 실패:", error);
                 alert("❌ " + (error.message || "비밀번호 재설정 중 오류 발생"));
             });
+    });
+
+    document.getElementById("google-login").addEventListener("click", async function () {
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        try {
+            const result = await firebase.auth().signInWithPopup(provider);
+            const user = result.user;
+            const idToken = await user.getIdToken();
+
+            console.log("✅ 구글 로그인 성공:", user.email);
+            console.log("🪪 ID Token:", idToken.substring(0, 20) + "...");
+
+            // JWT 요청
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken }),
+                credentials: 'include'
+            });
+
+            if (!response.ok) throw new Error(await response.text());
+            const data = await response.json();
+            const jwt = data.token;
+            const isNewUser = data.newUser === 'true';
+            localStorage.setItem("jwtToken", jwt);
+            if (isNewUser) {
+                window.location.href = "/profile/edit";
+            } else {
+                window.location.href = "/home";
+            }
+        } catch (error) {
+            console.error("❌ 구글 로그인 실패:", error);
+            if (error.code === 'auth/account-exists-with-different-credential') {
+                alert('이미 같은 이메일로 가입된 계정이 있습니다. 이메일/비밀번호 로그인을 사용해 주세요.');
+            } else {
+                alert("Google 로그인 실패: " + error.message);
+            }
+        }
     });
 </script>
 </body>
