@@ -60,7 +60,7 @@ public class ProfileController {
         if (email == null) return ResponseEntity.status(401).body("Unauthorized");
 
         if (!request.isValid()) {
-            return ResponseEntity.badRequest().body("❌ 태그는 최대 5개 이하로 선택 가능합니다.");
+            return ResponseEntity.badRequest().body("❌ 태그와 선호 키워드는 각각 최대 5개 이하로 입력 가능합니다.");
         }
 
         try {
@@ -71,13 +71,15 @@ public class ProfileController {
                     request.getGender(),
                     request.getBio(),
                     request.getMbti(),
-                    request.getTags()
+                    request.getTags(),
+                    request.getLikeTags() // ✅ 선호 키워드 추가 전달
             );
             return ResponseEntity.ok("✅ 프로필 전체 저장 완료");
         } catch (Exception e) {
             return ResponseEntity.status(500).body("❌ 저장 실패: " + e.getMessage());
         }
     }
+
 
     // [4] API: 프로필 데이터 조회 (React 등에서 사용 가능)
     @GetMapping("/api/profile")
