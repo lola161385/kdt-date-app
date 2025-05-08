@@ -244,23 +244,22 @@
     });
 
     document.getElementById('reset-password-auth').addEventListener('click', function () {
-        const user = firebase.auth().currentUser;
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (!user) {
+                alert("❗ 로그인 상태가 아닙니다.");
+                return;
+            }
 
-        if (!user) {
-            alert("❗ 로그인 상태가 아닙니다.");
-            return;
-        }
-
-        const email = user.email;
-
-        firebase.auth().sendPasswordResetEmail(email)
-            .then(() => {
-                alert("✅ 비밀번호 변경 링크를 이메일로 보냈습니다.");
-            })
-            .catch(error => {
-                console.error("❌ 비밀번호 변경 실패:", error);
-                alert("❌ " + (error.message || "비밀번호 변경 중 오류 발생"));
-            });
+            const email = user.email;
+            firebase.auth().sendPasswordResetEmail(email)
+                .then(() => {
+                    alert("✅ 비밀번호 변경 링크를 이메일로 보냈습니다.");
+                })
+                .catch(error => {
+                    console.error("❌ 비밀번호 변경 실패:", error);
+                    alert("❌ " + (error.message || "비밀번호 변경 중 오류 발생"));
+                });
+        });
     });
 </script>
 
