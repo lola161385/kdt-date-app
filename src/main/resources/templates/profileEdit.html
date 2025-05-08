@@ -28,10 +28,6 @@
         <input type="date" id="birthdate" name="birthdate" required>
     </label><br>
 
-    <label>자기소개:
-        <textarea id="bio" name="bio"></textarea>
-    </label><br>
-
     <label>MBTI:
         <select id="mbti" required>
             <option value="">선택하세요</option>
@@ -56,6 +52,15 @@
         <button type="button" class="tag-btn">열정적</button>
     </div><br>
 
+    <h3>선호하는 키워드 (최대 5개, 콤마로 구분하여 입력)</h3>
+    <input type="text" id="like-keywords" placeholder="예: 긍정적, 창의적, 감성적">
+    <p id="like-keywords-error" style="color: red; display: none;">❌ 최대 5개의 키워드만 입력할 수 있습니다.</p><br>
+
+    <!-- 자기소개글 생성 버튼 -->
+    <button type="button" id="generate-intro-btn">AI 자기소개글 생성</button><br>
+    <label>자기소개:
+        <textarea id="bio" name="bio" placeholder="AI가 생성한 자기소개가 여기에 표시됩니다." rows="5"></textarea><br>
+    </label><br>
     <button type="button" id="save-all">전체 저장하기</button>
 </form>
 
@@ -96,12 +101,12 @@
             .then(data => {
                 document.getElementById('profile-form').style.display = 'block';
                 const profile = data.profile || {};
+                const personality = profile.personality || {};
+
                 document.getElementById('name').value = data.profile.name || '';
                 document.getElementById('gender').value = profile.gender || '';
                 document.getElementById('birthdate').value = data.profile.birthdate || '';
                 document.getElementById('bio').value = data.profile.bio || '';
-
-                const personality = profile.personality || {};
                 document.getElementById('mbti').value = personality.mbti || '';
 
                 const tags = new Set(personality.tags || []);
@@ -138,13 +143,78 @@
         });
     });
 
+    // 자기소개 생성 버튼 이벤트
+    document.getElementById('generate-intro-btn').addEventListener('click', async () => {
+        const keywords = Array.from(selectedTags); // 기존 성격 태그
+        const likeKeywordsInput = document.getElementById('like-keywords').value.trim(); // 선호하는 키워드 입력
+        const bioField = document.getElementById('bio'); // 결과를 표시할 텍스트 영역
+        const mbti = document.getElementById('mbti').value; // MBTI 입력값
+
+        // 선호 키워드를 콤마로 나누고 중복 제거
+        const likeKeywords = Array.from(new Set(likeKeywordsInput.split(',').map(keyword => keyword.trim())));
+
+        // 키워드 검증: 빈 값 제거 및 최대 5개 제한
+        const validLikeKeywords = likeKeywords.filter(keyword => keyword !== '');
+        if (validLikeKeywords.length > 5) {
+            document.getElementById('like-keywords-error').style.display = 'block';
+            return;
+        } else {
+            document.getElementById('like-keywords-error').style.display = 'none';
+        }
+
+        // 필수 입력값 확인
+        if (!mbti || keywords.length === 0) {
+            alert("MBTI와 본인 태그는 필수입니다.");
+            return;
+        }
+
+        if (validLikeKeywords.length === 0) {
+            alert("선호하는 키워드는 최소 한 개 이상 입력해야 합니다.");
+            return;
+        }
+
+        try {
+            // API 요청
+            const response = await fetch("http://localhost:8000/generate-introduction", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    keywords: keywords, // 본인 태그
+                    mbti: [mbti], // MBTI
+                    likeKeyWords: validLikeKeywords, // 선호하는 키워드
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || "API 호출 실패");
+            }
+
+            const data = await response.json();
+            bioField.value = data.introduction; // 생성된 자기소개글 삽입
+            alert("AI 자기소개글이 생성되었습니다.");
+        } catch (e) {
+            alert("오류가 발생했습니다: " + e.message);
+        }
+    });
+
     document.getElementById('save-all').addEventListener('click', () => {
         const name = document.getElementById('name').value;
         const gender = document.getElementById('gender').value;
         const birthdate = document.getElementById('birthdate').value;
         const bio = document.getElementById('bio').value;
         const mbti = document.getElementById('mbti').value;
-        const tags = Array.from(selectedTags);
+        const tags = Array.from(selectedTags); // 성격 태그 선택값
+
+        const likeKeywordsInput = document.getElementById('like-keywords').value.trim();
+        const likeKeywords = Array.from(new Set(likeKeywordsInput.split(',').map(keyword => keyword.trim()))).filter(keyword => keyword !== '');
+
+        if (likeKeywords.length > 5) {
+            alert("❌ 선호하는 키워드는 최대 5개까지만 입력할 수 있습니다.");
+            return;
+        }
 
         if (!name || !gender || !birthdate || !mbti) {
             alert("이름, 성별, 생년월일, MBTI는 필수입니다.");
@@ -157,13 +227,13 @@
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + token
             },
-            body: JSON.stringify({ name, gender, birthdate, bio, mbti, tags })
+            body: JSON.stringify({ name, gender, birthdate, bio, mbti, tags, likeTags: likeKeywords })
         })
             .then(response => response.text())
             .then(msg => {
-                showToast(msg); // 알림 표시
+                showToast(msg); // 성공 메시지 표시
                 setTimeout(() => {
-                    window.location.href = "/profile"; // 1.5초 후 프로필 페이지로 이동
+                    window.location.href = "/profile"; // 1.5초 후 페이지 이동
                 }, 1500);
             })
             .catch(err => alert('❌ 저장 실패: ' + err.message));

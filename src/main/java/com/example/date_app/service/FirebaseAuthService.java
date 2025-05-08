@@ -39,27 +39,24 @@ public class FirebaseAuthService {
         FirebaseAuth.getInstance().deleteUser(user.getUid());
     }
 
-    public void updateUserProfile(String email, String name, String birthdate, String gender, String bio, String mbti, List<String> tags)
+    public void updateUserProfile(String email, String name, String birthdate, String gender, String bio, String mbti, List<String> tags, List<String> likeTags)
             throws FirebaseAuthException {
-
-        if (tags.size() > 5) throw new IllegalArgumentException("태그는 최대 5개까지 선택 가능합니다.");
-
         UserRecord user = FirebaseAuth.getInstance().getUserByEmail(email);
         String uid = user.getUid();
 
-        DatabaseReference ref = FirebaseDatabase.getInstance()
-                .getReference("users")
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("users")
                 .child(uid);
 
-        Map<String, Object> profile = new HashMap<>();
-        profile.put("name", name);
-        profile.put("email", email);
-        profile.put("birthdate", birthdate);
-        profile.put("bio", bio);
-        profile.put("gender", gender);
-        profile.put("personality", Map.of("mbti", mbti, "tags", tags));
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("name", name);
+        updates.put("birthdate", birthdate);
+        updates.put("gender", gender);
+        updates.put("bio", bio);
+        updates.put("personality/mbti", mbti);
+        updates.put("personality/tags", tags);
+        updates.put("personality/likeTags", likeTags);
 
-        ref.setValueAsync(profile);
+        ref.updateChildrenAsync(updates);
     }
 
     public Map<String, Object> getUserProfile(String email) throws FirebaseAuthException {
