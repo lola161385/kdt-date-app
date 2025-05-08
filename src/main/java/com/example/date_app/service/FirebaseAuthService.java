@@ -60,37 +60,55 @@ public class FirebaseAuthService {
     }
 
     public Map<String, Object> getUserProfile(String email) throws FirebaseAuthException {
+        UserRecord user = FirebaseAuth.getInstance().getUserByEmail(email);
+        String uid = user.getUid();
+
+        DatabaseReference ref = FirebaseDatabase.getInstance()
+                .getReference("users")
+                .child(uid);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        final Map<String, Object>[] result = new Map[1];
+
+        ref.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    result[0] = (Map<String, Object>) snapshot.getValue();
+                } else {
+                    result[0] = new HashMap<>();
+                }
+                latch.countDown();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                result[0] = new HashMap<>();
+                latch.countDown();
+            }
+        });
+
         try {
-            UserRecord user = getUserByEmail(email);
-            DatabaseReference ref = FirebaseDatabase.getInstance()
-                    .getReference("users")
-                    .child(user.getUid());
-
-            final Map<String, Object>[] result = new Map[]{null};
-            CountDownLatch latch = new CountDownLatch(1);
-
-            ref.addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(DataSnapshot dataSnapshot) {
-                    if (dataSnapshot.exists()) {
-                        result[0] = (Map<String, Object>) dataSnapshot.getValue();
-                    }
-                    latch.countDown();
-                }
-
-                @Override
-                public void onCancelled(DatabaseError databaseError) {
-                    latch.countDown();
-                }
-            });
-
             latch.await();
-            return result[0];
+            Map<String, Object> profile = result[0];
+            // 디폴트 키 처리
+            if (!profile.containsKey("personality")) {
+                profile.put("personality", new HashMap<String, Object>());
+            }
+            Map<String, Object> personality = (Map<String, Object>) profile.get("personality");
+
+            // personality 내의 필드 처리
+            if (!personality.containsKey("likeTags")) {
+                personality.put("likeTags", new ArrayList<>());
+            }
+
+            return profile;
+
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("프로필 조회 중 인터럽트 발생", e);
+            throw new RuntimeException("데이터 가져오기 실패", e);
         }
     }
+
 
     public void createInitialUserProfile(String email) throws FirebaseAuthException {
         UserRecord user = getUserByEmail(email);
