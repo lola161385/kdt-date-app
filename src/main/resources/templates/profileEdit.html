@@ -1,72 +1,159 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>프로필 수정</title>
+    <title>프로필 수정 - Date App</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <style>
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-weight: bold;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: #333;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .tag-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .tag-btn.selected {
+            background: rgba(100, 100, 255, 0.2);
+            border-color: rgba(100, 100, 255, 0.4);
+        }
+        .error-text {
+            color: #ff6464;
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: none;
+        }
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+    </style>
 </head>
 <body>
-<h2>프로필 수정</h2>
+    <div class="container">
+        <nav class="glass-nav">
+            <h1><i class="fas fa-user-edit"></i> 프로필 수정</h1>
+            <div class="nav-actions">
+                <a href="/home" class="glass-button">
+                    <i class="fas fa-home"></i> 홈으로
+                </a>
+            </div>
+        </nav>
 
-<div id="message"></div>
+        <div class="main-content">
+            <div id="message"></div>
 
-<!-- 프로필 폼 -->
-<form id="profile-form" style="display:none;">
-    <label>이름:
-        <input type="text" id="name" name="name" required>
-    </label><br>
+            <form id="profile-form" style="display:none;" class="glass-card">
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> 이름</label>
+                    <input type="text" id="name" name="name" class="glass-input" required>
+                </div>
 
-    <label>성별:
-        <select id="gender" name="gender" required>
-            <option value="">선택하세요</option>
-            <option value="남자">남자</option>
-            <option value="여자">여자</option>
-        </select>
-    </label><br>
+                <div class="form-group">
+                    <label><i class="fas fa-venus-mars"></i> 성별</label>
+                    <select id="gender" name="gender" class="glass-input" required>
+                        <option value="">선택하세요</option>
+                        <option value="남자">남자</option>
+                        <option value="여자">여자</option>
+                    </select>
+                </div>
 
-    <label>생년월일:
-        <input type="date" id="birthdate" name="birthdate" required>
-    </label><br>
+                <div class="form-group">
+                    <label><i class="fas fa-birthday-cake"></i> 생년월일</label>
+                    <input type="date" id="birthdate" name="birthdate" class="glass-input" required>
+                </div>
 
-    <label>MBTI:
-        <select id="mbti" required>
-            <option value="">선택하세요</option>
-            <option>INTJ</option><option>INTP</option><option>ENTJ</option><option>ENTP</option>
-            <option>INFJ</option><option>INFP</option><option>ENFJ</option><option>ENFP</option>
-            <option>ISTJ</option><option>ISFJ</option><option>ESTJ</option><option>ESFJ</option>
-            <option>ISTP</option><option>ISFP</option><option>ESTP</option><option>ESFP</option>
-        </select>
-    </label><br>
+                <div class="form-group">
+                    <label><i class="fas fa-brain"></i> MBTI</label>
+                    <select id="mbti" class="glass-input" required>
+                        <option value="">선택하세요</option>
+                        <option>INTJ</option><option>INTP</option><option>ENTJ</option><option>ENTP</option>
+                        <option>INFJ</option><option>INFP</option><option>ENFJ</option><option>ENFP</option>
+                        <option>ISTJ</option><option>ISFJ</option><option>ESTJ</option><option>ESFJ</option>
+                        <option>ISTP</option><option>ISFP</option><option>ESTP</option><option>ESFP</option>
+                    </select>
+                </div>
 
-    <h3>성격 태그 (최대 5개 선택)</h3>
-    <div id="tags">
-        <button type="button" class="tag-btn">긍정적</button>
-        <button type="button" class="tag-btn">창의적</button>
-        <button type="button" class="tag-btn">감성적</button>
-        <button type="button" class="tag-btn">성실함</button>
-        <button type="button" class="tag-btn">도전적</button>
-        <button type="button" class="tag-btn">예술가</button>
-        <button type="button" class="tag-btn">낙천적</button>
-        <button type="button" class="tag-btn">배려심</button>
-        <button type="button" class="tag-btn">신중함</button>
-        <button type="button" class="tag-btn">열정적</button>
-    </div><br>
+                <div class="form-group">
+                    <label><i class="fas fa-tags"></i> 성격 태그 (최대 5개 선택)</label>
+                    <div class="tag-container" id="tags">
+                        <button type="button" class="tag-btn">긍정적</button>
+                        <button type="button" class="tag-btn">창의적</button>
+                        <button type="button" class="tag-btn">감성적</button>
+                        <button type="button" class="tag-btn">성실함</button>
+                        <button type="button" class="tag-btn">도전적</button>
+                        <button type="button" class="tag-btn">예술가</button>
+                        <button type="button" class="tag-btn">낙천적</button>
+                        <button type="button" class="tag-btn">배려심</button>
+                        <button type="button" class="tag-btn">신중함</button>
+                        <button type="button" class="tag-btn">열정적</button>
+                    </div>
+                </div>
 
-    <h3>선호하는 키워드 (최대 5개, 콤마로 구분하여 입력)</h3>
-    <input type="text" id="like-keywords" placeholder="예: 긍정적, 창의적, 감성적">
-    <p id="like-keywords-error" style="color: red; display: none;">❌ 최대 5개의 키워드만 입력할 수 있습니다.</p><br>
+                <div class="form-group">
+                    <label><i class="fas fa-heart"></i> 선호하는 키워드 (최대 5개, 콤마로 구분)</label>
+                    <input type="text" id="like-keywords" class="glass-input" 
+                           placeholder="예: 긍정적, 창의적, 감성적">
+                    <p id="like-keywords-error" class="error-text">❌ 최대 5개의 키워드만 입력할 수 있습니다.</p>
+                </div>
 
-    <!-- 자기소개글 생성 버튼 -->
-    <button type="button" id="generate-intro-btn">AI 자기소개글 생성</button><br>
-    <label>자기소개:
-        <textarea id="bio" name="bio" placeholder="AI가 생성한 자기소개가 여기에 표시됩니다." rows="5"></textarea><br>
-    </label><br>
-    <button type="button" id="save-all">전체 저장하기</button>
-</form>
+                <div class="form-group">
+                    <label><i class="fas fa-comment"></i> 자기소개</label>
+                    <button type="button" id="generate-intro-btn" class="glass-button" style="margin-bottom: 10px;">
+                        <i class="fas fa-magic"></i> AI 자기소개글 생성
+                    </button>
+                    <textarea id="bio" name="bio" class="glass-input" 
+                              placeholder="AI가 생성한 자기소개가 여기에 표시됩니다." rows="5"></textarea>
+                </div>
 
-<a href="/home">홈으로</a>
-
-<button id="reset-password-auth">비밀번호 변경 메일 보내기</button>
+                <div class="form-actions">
+                    <button type="button" id="save-all" class="glass-button">
+                        <i class="fas fa-save"></i> 전체 저장하기
+                    </button>
+                    <button type="button" id="reset-password-auth" class="glass-button">
+                        <i class="fas fa-key"></i> 비밀번호 변경 메일 보내기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 <script>
     const firebaseConfig = {
@@ -114,10 +201,10 @@
                     const value = btn.textContent;
                     if (tags.has(value)) {
                         selectedTags.add(value);
-                        btn.style.backgroundColor = '#aaa';
+                        btn.classList.add('selected');
                     }
                 });
-                // likeTags 필드 채우기
+                
                 const likeTags = personality.likeTags || [];
                 if (likeTags.length > 0) {
                     document.getElementById('like-keywords').value = likeTags.join(', ');
@@ -135,29 +222,26 @@
             const value = btn.textContent;
             if (selectedTags.has(value)) {
                 selectedTags.delete(value);
-                btn.style.backgroundColor = '';
+                btn.classList.remove('selected');
             } else {
                 if (selectedTags.size >= 5) {
                     alert('태그는 최대 5개까지 선택 가능합니다.');
                     return;
                 }
                 selectedTags.add(value);
-                btn.style.backgroundColor = '#aaa';
+                btn.classList.add('selected');
             }
         });
     });
 
-    // 자기소개 생성 버튼 이벤트
     document.getElementById('generate-intro-btn').addEventListener('click', async () => {
-        const keywords = Array.from(selectedTags); // 기존 성격 태그
-        const likeKeywordsInput = document.getElementById('like-keywords').value.trim(); // 선호하는 키워드 입력
-        const bioField = document.getElementById('bio'); // 결과를 표시할 텍스트 영역
-        const mbti = document.getElementById('mbti').value; // MBTI 입력값
+        const keywords = Array.from(selectedTags);
+        const likeKeywordsInput = document.getElementById('like-keywords').value.trim();
+        const bioField = document.getElementById('bio');
+        const mbti = document.getElementById('mbti').value;
 
-        // 선호 키워드를 콤마로 나누고 중복 제거
         const likeKeywords = Array.from(new Set(likeKeywordsInput.split(',').map(keyword => keyword.trim())));
 
-        // 키워드 검증: 빈 값 제거 및 최대 5개 제한
         const validLikeKeywords = likeKeywords.filter(keyword => keyword !== '');
         if (validLikeKeywords.length > 5) {
             document.getElementById('like-keywords-error').style.display = 'block';
@@ -166,7 +250,6 @@
             document.getElementById('like-keywords-error').style.display = 'none';
         }
 
-        // 필수 입력값 확인
         if (!mbti || keywords.length === 0) {
             alert("MBTI와 본인 태그는 필수입니다.");
             return;
@@ -178,16 +261,15 @@
         }
 
         try {
-            // API 요청
             const response = await fetch("http://210.109.54.109:8000/generate-introduction", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    keywords: keywords, // 본인 태그
-                    mbti: [mbti], // MBTI
-                    likeKeyWords: validLikeKeywords, // 선호하는 키워드
+                    keywords: keywords,
+                    mbti: [mbti],
+                    likeKeyWords: validLikeKeywords,
                 }),
             });
 
@@ -197,117 +279,94 @@
             }
 
             const data = await response.json();
-            bioField.value = data.introduction; // 생성된 자기소개글 삽입
-            alert("AI 자기소개글이 생성되었습니다.");
-        } catch (e) {
-            alert("오류가 발생했습니다: " + e.message);
+            bioField.value = data.introduction;
+        } catch (error) {
+            console.error("자기소개글 생성 실패:", error);
+            alert("자기소개글 생성에 실패했습니다. 다시 시도해주세요.");
         }
     });
 
-    document.getElementById('save-all').addEventListener('click', () => {
+    document.getElementById('save-all').addEventListener('click', async () => {
         const name = document.getElementById('name').value;
         const gender = document.getElementById('gender').value;
         const birthdate = document.getElementById('birthdate').value;
         const bio = document.getElementById('bio').value;
         const mbti = document.getElementById('mbti').value;
-        const tags = Array.from(selectedTags); // 성격 태그 선택값
-
-        const likeKeywordsInput = document.getElementById('like-keywords').value.trim();
-        const likeKeywords = Array.from(new Set(likeKeywordsInput.split(',').map(keyword => keyword.trim()))).filter(keyword => keyword !== '');
-
-        if (likeKeywords.length > 5) {
-            alert("❌ 선호하는 키워드는 최대 5개까지만 입력할 수 있습니다.");
-            return;
-        }
+        const tags = Array.from(selectedTags);
+        const likeKeywords = document.getElementById('like-keywords').value
+            .split(',')
+            .map(k => k.trim())
+            .filter(k => k !== '');
 
         if (!name || !gender || !birthdate || !mbti) {
-            alert("이름, 성별, 생년월일, MBTI는 필수입니다.");
+            alert('필수 항목을 모두 입력해주세요.');
             return;
         }
 
-        fetch('/api/profile/update', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify({ name, gender, birthdate, bio, mbti, tags, likeTags: likeKeywords })
-        })
-            .then(response => response.text())
-            .then(msg => {
-                showToast(msg); // 성공 메시지 표시
-                setTimeout(() => {
-                    window.location.href = "/profile"; // 1.5초 후 페이지 이동
-                }, 1500);
-            })
-            .catch(err => alert('❌ 저장 실패: ' + err.message));
+        if (tags.length === 0) {
+            alert('성격 태그를 최소 1개 이상 선택해주세요.');
+            return;
+        }
+
+        if (likeKeywords.length === 0) {
+            alert('선호하는 키워드를 최소 1개 이상 입력해주세요.');
+            return;
+        }
+
+        if (likeKeywords.length > 5) {
+            alert('선호하는 키워드는 최대 5개까지만 입력 가능합니다.');
+            return;
+        }
+
+        const profileData = {
+            name,
+            gender,
+            birthdate,
+            bio,
+            personality: {
+                mbti,
+                tags,
+                likeTags: likeKeywords
+            }
+        };
+
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(profileData)
+            });
+
+            if (!response.ok) {
+                throw new Error('프로필 저장 실패');
+            }
+
+            alert('프로필이 성공적으로 저장되었습니다.');
+            window.location.href = '/profile';
+        } catch (error) {
+            console.error('프로필 저장 중 오류 발생:', error);
+            alert('프로필 저장에 실패했습니다. 다시 시도해주세요.');
+        }
     });
 
-    document.getElementById('reset-password-auth').addEventListener('click', function () {
-        firebase.auth().onAuthStateChanged(function(user) {
+    document.getElementById('reset-password-auth').addEventListener('click', async () => {
+        try {
+            const user = firebase.auth().currentUser;
             if (!user) {
-                alert("❗ 로그인 상태가 아닙니다.");
+                alert('로그인이 필요합니다.');
                 return;
             }
 
-            const email = user.email;
-            firebase.auth().sendPasswordResetEmail(email)
-                .then(() => {
-                    alert("✅ 비밀번호 변경 링크를 이메일로 보냈습니다.");
-                })
-                .catch(error => {
-                    console.error("❌ 비밀번호 변경 실패:", error);
-                    alert("❌ " + (error.message || "비밀번호 변경 중 오류 발생"));
-                });
-        });
+            await firebase.auth().sendPasswordResetEmail(user.email);
+            alert('비밀번호 재설정 메일이 발송되었습니다. 이메일을 확인해주세요.');
+        } catch (error) {
+            console.error('비밀번호 재설정 메일 발송 실패:', error);
+            alert('비밀번호 재설정 메일 발송에 실패했습니다. 다시 시도해주세요.');
+        }
     });
 </script>
-
-<style>
-    #toast {
-        visibility: hidden;
-        min-width: 200px;
-        margin-left: -100px;
-        background-color: #333;
-        color: #fff;
-        text-align: center;
-        border-radius: 8px;
-        padding: 12px;
-        position: fixed;
-        z-index: 1;
-        left: 50%;
-        bottom: 30px;
-        font-size: 16px;
-    }
-
-    #toast.show {
-        visibility: visible;
-        animation: fadein 0.5s, fadeout 0.5s 1.2s;
-    }
-
-    @keyframes fadein {
-        from { bottom: 0; opacity: 0; }
-        to { bottom: 30px; opacity: 1; }
-    }
-
-    @keyframes fadeout {
-        from { bottom: 30px; opacity: 1; }
-        to { bottom: 0; opacity: 0; }
-    }
-</style>
-
-<div id="toast"></div>
-
-<script>
-    function showToast(message) {
-        const toast = document.getElementById("toast");
-        toast.textContent = message;
-        toast.className = "show";
-        setTimeout(() => {
-            toast.className = toast.className.replace("show", "");
-        }, 1500);
-    }
-</script>
-
 </body>
 </html>

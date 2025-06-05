@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+    <script src="/js/firebase-config.js"></script>
 </head>
 <body>
 <div class="container">
@@ -52,19 +54,6 @@
 </div>
 
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyC_fS_I_g0jicSPKLqBxF8if2ffnDKrvNM",
-        authDomain: "date-app-41a1c.firebaseapp.com",
-        projectId: "date-app-41a1c",
-        storageBucket: "date-app-41a1c.firebasestorage.app",
-        messagingSenderId: "950558236414",
-        appId: "1:950558236414:web:f65dad635607345aa8cfaf",
-        measurementId: "G-EBTEFW9PDH"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-
     // 개발자 모드 로그인
     document.getElementById('dev-login').addEventListener('click', function() {
         const devToken = 'dev_token_' + Date.now();
