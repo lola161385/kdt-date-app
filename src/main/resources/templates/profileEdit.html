@@ -265,7 +265,9 @@
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     keywords: keywords,
                     mbti: [mbti],
@@ -323,15 +325,13 @@
             gender,
             birthdate,
             bio,
-            personality: {
-                mbti,
-                tags,
-                likeTags: likeKeywords
-            }
+            mbti,
+            tags,
+            likeTags: likeKeywords
         };
 
         try {
-            const response = await fetch('/api/profile', {
+            const response = await fetch('/api/profile/update', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

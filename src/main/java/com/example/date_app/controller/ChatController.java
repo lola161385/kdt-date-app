@@ -7,17 +7,28 @@ import com.google.firebase.auth.FirebaseToken;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
 @Slf4j
-@RestController
+@Controller
 @RequiredArgsConstructor
-@RequestMapping("/api/chat")
 public class ChatController {
 
-    @PostMapping("/verify-token")
+    @GetMapping("/chat/list")
+    public String chatList() {
+        return "chatList";
+    }
+
+    @GetMapping("/chat/room")
+    public String chatRoom() {
+        return "chatRoom";
+    }
+
+    @PostMapping("/api/chat/verify-token")
+    @ResponseBody
     public ResponseEntity<String> verifyToken(@RequestBody Map<String, String> request) {
         try {
             String idToken = request.get("idToken");
