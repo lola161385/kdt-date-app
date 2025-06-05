@@ -12,6 +12,92 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
     <script src="/js/firebase-config.js"></script>
+    <style>
+        /* 해당 css는 비밀번호 찾기 모달 창 스타일 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+        }
+
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            z-index: 1001;
+            width: 90%;
+            max-width: 400px;
+            transition: none;
+        }
+
+        .modal:hover {
+            transform: translate(-50%, -50%);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            font-size: 1.5em;
+            color: #666;
+            transition: color 0.2s ease;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .modal-content {
+            text-align: center;
+        }
+
+        .modal-title {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .reset-link {
+            color: #444444;
+            text-decoration: none;
+            transition: color 0.2s ease;
+            position: relative;
+            display: inline-block;
+        }
+
+        .reset-link:hover {
+            color: #000000;
+        }
+
+        .reset-link::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 1px;
+            bottom: -2px;
+            left: 0;
+            background-color: #000000;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.2s ease;
+        }
+
+        .reset-link:hover::after {
+            transform: scaleX(1);
+        }
+    </style>
 </head>
 <body>
 <div class="container">
@@ -46,10 +132,27 @@
             </button>
         </div>
 
-        <p><a href="#" id="reset-password-link">비밀번호를 잊으셨나요?</a></p>
+        <p><a href="#" id="reset-password-link" class="reset-link">비밀번호를 잊으셨나요?</a></p>
         <p>계정이 없으신가요? <a href="/register">회원가입</a></p>
 
         <p id="message" style="color: red;"></p>
+    </div>
+</div>
+
+<!-- 비밀번호 재설정 모달 -->
+<div id="reset-password-modal" class="modal-overlay">
+    <div class="modal glass-card">
+        <span class="modal-close" onclick="closeResetModal()">&times;</span>
+        <div class="modal-content">
+            <h3 class="modal-title"><i class="fas fa-key"></i> 비밀번호 재설정</h3>
+            <div class="form-group">
+                <input type="email" id="reset-email" class="glass-input" 
+                       placeholder="이메일을 입력하세요" required>
+            </div>
+            <button onclick="sendResetEmail()" class="glass-button">
+                <i class="fas fa-paper-plane"></i> 재설정 메일 보내기
+            </button>
+        </div>
     </div>
 </div>
 
@@ -122,18 +225,49 @@
         }
     });
 
-    document.getElementById('reset-password-link').addEventListener('click', function () {
-        const email = prompt("비밀번호 재설정 메일을 받을 이메일을 입력하세요:");
-        if (!email) return;
+    function openResetModal() {
+        document.getElementById('reset-password-modal').style.display = 'block';
+    }
 
-        firebase.auth().sendPasswordResetEmail(email)
-            .then(() => {
-                alert("✅ 비밀번호 재설정 이메일을 보냈습니다. 이메일을 확인해주세요.");
-            })
-            .catch(error => {
-                console.error("❌ 비밀번호 재설정 실패:", error);
-                alert("❌ " + (error.message || "비밀번호 재설정 중 오류 발생"));
-            });
+    function closeResetModal() {
+        document.getElementById('reset-password-modal').style.display = 'none';
+    }
+
+    async function sendResetEmail() {
+        const email = document.getElementById('reset-email').value.trim();
+        if (!email) {
+            alert("이메일을 입력해주세요.");
+            return;
+        }
+
+        try {
+            await firebase.auth().sendPasswordResetEmail(email);
+            alert("✅ 비밀번호 재설정 이메일을 보냈습니다. 이메일을 확인해주세요.");
+            closeResetModal();
+        } catch (error) {
+            console.error("❌ 비밀번호 재설정 실패:", error);
+            alert("❌ " + (error.message || "비밀번호 재설정 중 오류 발생"));
+        }
+    }
+
+    document.getElementById('reset-password-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        openResetModal();
+    });
+
+    // 모달 외부 클릭 시 닫기
+    window.onclick = function(event) {
+        const modal = document.getElementById('reset-password-modal');
+        if (event.target === modal) {
+            closeResetModal();
+        }
+    }
+
+    // ESC 키로 모달 닫기
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeResetModal();
+        }
     });
 
     document.getElementById("google-login").addEventListener("click", async function () {
