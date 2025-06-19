@@ -43,4 +43,27 @@ public class AiController {
             return ResponseEntity.status(500).body(errorResponse);
         }
     }
+
+    @PostMapping("/generate-chat-starters")
+    public ResponseEntity<Map<String, Object>> generateChatStarters(@RequestBody Map<String, Object> request) {
+        try {
+            String targetName = (String) request.get("targetName");
+            String targetMbti = (String) request.get("targetMbti");
+            
+            @SuppressWarnings("unchecked")
+            List<String> targetTags = (List<String>) request.get("targetTags");
+
+            List<String> chatStarters = aiService.generateChatStarters(targetName, targetMbti, targetTags);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("chatStarters", chatStarters);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
 }

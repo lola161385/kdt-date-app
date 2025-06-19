@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @Controller
 @RequiredArgsConstructor
@@ -95,6 +96,29 @@ public class ProfileController {
             return ResponseEntity.ok(Map.of("userEmail", userEmail, "profile", profile));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", "Profile fetch failed"));
+        }
+    }
+
+    // 다른 사용자의 프로필 정보 가져오기
+    @GetMapping("/api/profile/get")
+    @ResponseBody
+    public ResponseEntity<?> getUserProfile(@RequestParam String email) {
+        String currentUserEmail = getCurrentUserEmail();
+        if (currentUserEmail == null) return ResponseEntity.status(401).body("Unauthorized");
+
+        try {
+            Map<String, Object> profile = firebaseAuthService.getUserProfile(email);
+            if (profile == null) {
+                return ResponseEntity.status(404).body("프로필을 찾을 수 없습니다.");
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("userEmail", email);
+            response.put("profile", profile);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("프로필 조회 실패: " + e.getMessage());
         }
     }
 
