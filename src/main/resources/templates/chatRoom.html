@@ -59,6 +59,50 @@
     .chat-input-container input {
       flex-grow: 1;
     }
+
+    .chat-starters-container {
+      margin-bottom: 15px;
+      display: none;
+    }
+    
+    .chat-starter {
+      background: rgba(230, 230, 255, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(200, 200, 255, 0.3);
+      border-radius: 10px;
+      padding: 10px;
+      margin: 5px 0;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .chat-starter:hover {
+      background: rgba(210, 210, 255, 0.8);
+      transform: translateY(-2px);
+    }
+    
+    /* 로딩 스피너 스타일 수정 */
+    #chat-starters-loading {
+      text-align: center;
+      padding: 15px;
+      color: #666;
+    }
+    
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(200, 200, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #6666ff;
+      animation: spin 1s ease-in-out infinite;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -75,6 +119,16 @@
     <div class="main-content">
       <div class="glass-card chat-container">
         <div id="chat-log"></div>
+        
+        <!-- 대화 시작 문구 추천 컨테이너 -->
+        <div id="chat-starters-container" class="chat-starters-container">
+          <h3>대화 시작 추천 문구</h3>
+          <div id="chat-starters-loading">
+            <span class="loading-spinner"></span> 추천 문구 생성 중...
+          </div>
+          <div id="chat-starters-list"></div>
+        </div>
+        
         <div class="chat-input-container">
           <input type="text" id="chat-input" class="glass-input" placeholder="메시지를 입력하세요..." 
                  onkeypress="if(event.keyCode==13) sendMessage()"/>
@@ -105,6 +159,7 @@
 
     let currentUserEmail = null;
     let roomId = null;
+    let targetUserProfile = null;
 
     function sanitizeEmail(email) {
       return email.replace(/\./g, '_dot_').replace(/@/g, '_at_');
@@ -114,7 +169,114 @@
       return [sanitizeEmail(email1), sanitizeEmail(email2)].sort().join("_");
     }
 
-    auth.onAuthStateChanged(function(user) {
+    // 상대방 프로필 정보 가져오기
+    async function fetchTargetUserProfile(email) {
+      try {
+        const token = localStorage.getItem('jwtToken');
+        const response = await fetch(`/api/profile/get?email=${encodeURIComponent(email)}`, {
+          headers: {
+            'Authorization': 'Bearer ' + token
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('프로필 정보를 가져오는데 실패했습니다.');
+        }
+        
+        const data = await response.json();
+        console.log("받아온 프로필 데이터:", data); // 디버깅용 로그
+        
+        // 응답 구조 확인 후 profile 객체 반환
+        if (data && data.profile) {
+          return data.profile;
+        } else {
+          console.error('프로필 데이터 구조가 예상과 다릅니다:', data);
+          return null;
+        }
+      } catch (error) {
+        console.error('프로필 정보 가져오기 실패:', error);
+        return null;
+      }
+    }
+
+    // 대화 시작 문구 생성
+    async function generateChatStarters(targetProfile) {
+      try {
+        console.log("AI에 전달할 프로필 데이터:", targetProfile); // 디버깅용 로그
+        
+        // 프로필 데이터 구조 확인 및 안전하게 추출
+        const targetName = targetProfile.name || '상대방';
+        const personality = targetProfile.personality || {};
+        const targetMbti = personality.mbti || '';
+        const targetTags = Array.isArray(personality.tags) ? personality.tags : [];
+        
+        console.log("AI 요청 파라미터:", { targetName, targetMbti, targetTags }); // 디버깅용 로그
+        
+        const token = localStorage.getItem('jwtToken');
+        const response = await fetch('/api/ai/generate-chat-starters', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            targetName: targetName,
+            targetMbti: targetMbti,
+            targetTags: targetTags
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('대화 시작 문구 생성에 실패했습니다.');
+        }
+        
+        const data = await response.json();
+        return data.chatStarters;
+      } catch (error) {
+        console.error('대화 시작 문구 생성 실패:', error);
+        return [
+          withUser + "님, 안녕하세요! 프로필을 보고 정말 매력적이라고 느껴 대화를 나눠보고 싶어 연락드립니다. 오늘 하루는 어떻게 보내셨나요?",
+          withUser + "님, 반갑습니다! 프로필에서 느껴지는 분위기가 정말 좋아 보여요. 서로 알아가면 즐거운 시간이 될 것 같아요. 주말 계획이 있으신가요?",
+          withUser + "님, 안녕하세요! 취미나 관심사가 비슷한 것 같아 메시지 드립니다. 특별히 좋아하시는 활동이나 취미가 있으신가요? 저도 공유하고 싶어요."
+        ];
+      }
+    }
+
+    // 대화 시작 문구 표시
+    function displayChatStarters(starters) {
+      const container = document.getElementById('chat-starters-container');
+      const loadingElement = document.getElementById('chat-starters-loading');
+      const listElement = document.getElementById('chat-starters-list');
+      
+      loadingElement.style.display = 'none';
+      listElement.innerHTML = '';
+      
+      starters.forEach(starter => {
+        const div = document.createElement('div');
+        div.className = 'chat-starter';
+        div.textContent = starter;
+        div.onclick = () => {
+          document.getElementById('chat-input').value = starter;
+          document.getElementById('chat-input').focus();
+          // 추천 문구 컨테이너 숨기기
+          container.style.display = 'none';
+        };
+        listElement.appendChild(div);
+      });
+      
+      container.style.display = 'block';
+    }
+
+    // 채팅방 메시지 기록 확인
+    async function checkChatHistory(roomId) {
+      return new Promise((resolve) => {
+        db.ref("chats/" + roomId + "/messages").once("value", snapshot => {
+          resolve(snapshot.exists());
+        });
+      });
+    }
+
+    auth.onAuthStateChanged(async function(user) {
       if (user) {
         currentUserEmail = user.email;
         const safeCurrentEmail = sanitizeEmail(currentUserEmail);
@@ -123,6 +285,41 @@
         roomId = generateRoomId(currentUserEmail, withUser);
         listenForMessages(roomId);
         markAllAsRead(roomId, safeCurrentEmail);
+        
+        // 채팅 기록 확인
+        const hasChatHistory = await checkChatHistory(roomId);
+        console.log("채팅 기록 존재 여부:", hasChatHistory); // 디버깅용 로그
+        
+        // 채팅 기록이 없으면 대화 시작 문구 생성
+        if (!hasChatHistory) {
+          // 로딩 표시 보이기
+          const container = document.getElementById('chat-starters-container');
+          const loadingElement = document.getElementById('chat-starters-loading');
+          
+          container.style.display = 'block';
+          loadingElement.style.display = 'block';
+          
+          console.log("로딩 표시 활성화"); // 디버깅용 로그
+          
+          // 상대방 프로필 정보 가져오기
+          const targetUserData = await fetchTargetUserProfile(withUser);
+          console.log("상대방 프로필 데이터:", targetUserData); // 디버깅용 로그
+          
+          if (targetUserData) {
+            targetUserProfile = targetUserData;
+            const chatStarters = await generateChatStarters(targetUserProfile);
+            displayChatStarters(chatStarters);
+          } else {
+            console.error("상대방 프로필을 가져오지 못했습니다.");
+            // 프로필을 가져오지 못해도 기본 추천 문구 표시
+            const defaultStarters = [
+              withUser + "님, 안녕하세요! 프로필을 보고 정말 매력적이라고 느껴 대화를 나눠보고 싶어 연락드립니다. 오늘 하루는 어떻게 보내셨나요?",
+              withUser + "님, 반갑습니다! 프로필에서 느껴지는 분위기가 정말 좋아 보여요. 서로 알아가면 즐거운 시간이 될 것 같아요. 주말 계획이 있으신가요?",
+              withUser + "님, 안녕하세요! 취미나 관심사가 비슷한 것 같아 메시지 드립니다. 특별히 좋아하시는 활동이나 취미가 있으신가요? 저도 공유하고 싶어요."
+            ];
+            displayChatStarters(defaultStarters);
+          }
+        }
       } else {
         alert("로그인이 필요합니다.");
         location.href = "/login";
