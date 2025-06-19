@@ -21,6 +21,9 @@ configurations {
 
 repositories {
 	mavenCentral()
+	// Spring AI 저장소 추가
+	maven { url "https://repo.spring.io/milestone" }
+	maven { url "https://repo.spring.io/snapshot" }
 }
 
 dependencies {
@@ -45,6 +48,9 @@ dependencies {
 
 	implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
+
+	// Spring AI 의존성 추가 (버전 수정)
+	implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter:0.8.1'
 }
 
 // 리소스 설정 추가
