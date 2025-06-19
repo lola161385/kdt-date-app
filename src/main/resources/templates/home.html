@@ -1,26 +1,84 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>홈</title>
+    <title>홈 - First Letter 메인 페이지</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-<h1>홈페이지</h1>
+    <div class="container">
+        <nav class="glass-nav">
+            <h1>First Letter</h1>
+            <div>
+                <a href="/profile" class="glass-button">
+                    <i class="fas fa-user"></i> 프로필
+                </a>
+            </div>
+        </nav>
 
-<p>여기는 소개팅 앱의 홈 화면입니다.</p>
+        <div class="main-content">
+            <div class="glass-card">
+                <div class="card-content text-center">
+                    <i class="fas fa-user-circle icon"></i>
+                    <h2>내 프로필</h2>
+                    <p>프로필을 관리하고 수정하세요</p>
+                    <a href="/profile" class="glass-button">
+                        <i class="fas fa-arrow-right"></i> 프로필 보기
+                    </a>
+                </div>
+            </div>
 
-<!-- 프로필 페이지로 이동 버튼 -->
-<a href="/profile">
-    <button type="button">내 프로필 보기</button>
-</a>
-<br><br>
-<a href="/match">
-    <button type="button">매칭 추천 목록</button>
-</a>
+            <div class="glass-card">
+                <div class="card-content text-center">
+                    <i class="fas fa-heart icon"></i>
+                    <h2>매칭 추천</h2>
+                    <p>새로운 인연을 찾아보세요</p>
+                    <a href="/match" class="glass-button">
+                        <i class="fas fa-arrow-right"></i> 매칭 보기
+                    </a>
+                </div>
+            </div>
 
-<a href="/chat/list">
-    <button type="button">채팅 목록 보기</button>
-</a>
+            <div class="glass-card">
+                <div class="card-content text-center">
+                    <i class="fas fa-comments icon"></i>
+                    <h2>채팅</h2>
+                    <p>매칭된 상대와 대화하세요</p>
+                    <a href="/chat/list" class="glass-button">
+                        <i class="fas fa-arrow-right"></i> 채팅 목록
+                        <span class="notification-badge" style="display: none;">0</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        const token = localStorage.getItem('jwtToken');
+        const isDevMode = localStorage.getItem('devMode') === 'true';
+
+        if (!token && !isDevMode) {
+            window.location.href = '/login';
+        }
+
+        // 알림 배지 업데이트 (예시)
+        function updateNotificationBadge() {
+            const badge = document.querySelector('.notification-badge');
+            // 실제 구현에서는 서버에서 읽지 않은 메시지 수를 가져와야 함
+            const unreadCount = 0;
+            
+            if (unreadCount > 0) {
+                badge.style.display = 'inline';
+                badge.textContent = unreadCount;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // 페이지 로드 시 알림 배지 업데이트
+        updateNotificationBadge();
+    </script>
 </body>
 </html>

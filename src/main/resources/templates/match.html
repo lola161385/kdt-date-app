@@ -3,42 +3,28 @@
 <head>
   <title>매칭 추천</title>
   <meta charset="UTF-8">
-  <style>
-    .card {
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 1rem;
-      margin: 1rem 0;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-
-    .card h3 {
-      margin: 0.5rem 0;
-    }
-
-    .tag {
-      display: inline-block;
-      background-color: #f0f0f0;
-      border-radius: 8px;
-      padding: 0.2rem 0.5rem;
-      margin: 0.2rem;
-      font-size: 0.9rem;
-    }
-
-    .button {
-      margin-top: 1rem;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" type="text/css" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-<h2>매칭 추천 목록</h2>
+<div class="container">
+  <nav class="glass-nav">
+    <h1><i class="fas fa-heart"></i> 매칭 추천</h1>
+    <div>
+      <a href="/home" class="glass-button">
+        <i class="fas fa-home"></i> 홈으로
+      </a>
+    </div>
+  </nav>
 
-<div id="recommendation-list"></div>
+  <div class="main-content">
+    <div id="recommendation-list" class="glass-card">
+      <!-- 매칭 목록이 여기에 동적으로 추가됨 -->
+    </div>
+  </div>
+</div>
 
-<a href="/profile">내 프로필로</a>
-<a href="/home">
-  <button type="button">홈으로</button>
-</a>
 <script>
   const token = localStorage.getItem('jwtToken');
   console.log("JWT Token:", token);
@@ -54,40 +40,50 @@
       'Authorization': 'Bearer ' + token
     }
   })
-          .then(res => {
-            if (!res.ok) {
-              // 이때 HTML (예: 로그인 페이지) 이 반환될 수 있음
-              throw new Error("인증 실패 또는 서버 오류");
-            }
-            return res.json();
-          })
-          .then(data => {
-            const container = document.getElementById('recommendation-list');
+    .then(res => {
+      if (!res.ok) {
+        throw new Error("인증 실패 또는 서버 오류");
+      }
+      return res.json();
+    })
+    .then(data => {
+      const container = document.getElementById('recommendation-list');
 
-            if (!data.length) {
-              container.innerHTML = '<p>추천 대상이 없습니다 😥</p>';
-              return;
-            }
+      if (!data.length) {
+        container.innerHTML = `
+          <div class="text-center" style="padding: 20px;">
+            <i class="fas fa-heart-broken icon"></i>
+            <p>추천 대상이 없습니다 😥</p>
+          </div>`;
+        return;
+      }
 
-            data.forEach(user => {
-              const card = document.createElement('div');
-              card.className = 'card';
+      data.forEach(user => {
+        const card = document.createElement('div');
+        card.className = 'glass-card';
+        card.style.margin = '10px 0';
 
-              card.innerHTML = `
-                <h3>${user.name} (${user.mbti})</h3>
-                <p>공통 태그: ${user.commonTags.map(tag => `<span class="tag">${tag}</span>`).join('')}</p>
-                <p>매칭 점수: <strong>${user.score}</strong></p>
-                <button class="button" onclick="startChat('${user.email}')">채팅 시작</button>
-               ` ;
+        card.innerHTML = `
+          <div class="card-content">
+            <h3><i class="fas fa-user"></i> ${user.name} (${user.mbti})</h3>
+            <div class="tag-list">
+              ${user.commonTags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+            </div>
+            <p style="margin: 10px 0;">매칭 점수: <strong>${user.score}</strong></p>
+            <button class="glass-button" onclick="startChat('${user.email}')">
+              <i class="fas fa-comments"></i> 채팅 시작
+            </button>
+          </div>
+        `;
 
+        container.appendChild(card);
+      });
+    })
+    .catch(err => {
+      console.error("매칭 추천 에러:", err);
+      alert("추천 데이터를 불러오는 중 오류가 발생했습니다.");
+    });
 
-              container.appendChild(card);
-            });
-          })
-          .catch(err => {
-            console.error("매칭 추천 에러:", err);
-            alert("추천 데이터를 불러오는 중 오류가 발생했습니다.");
-          });
   function startChat(targetEmail) {
     const encoded = encodeURIComponent(targetEmail);
     window.location.href = `/chat/room?with=${encoded}`;
