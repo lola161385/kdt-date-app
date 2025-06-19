@@ -261,13 +261,12 @@
         }
 
         try {
-            const response = await fetch("http://210.109.54.109:8000/generate-introduction", {
+            const response = await fetch("/api/ai/generate-introduction", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Access-Control-Allow-Origin": "*"
+                    "Authorization": "Bearer " + token
                 },
-                credentials: 'include',
                 body: JSON.stringify({
                     keywords: keywords,
                     mbti: [mbti],
@@ -277,7 +276,7 @@
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.detail || "API 호출 실패");
+                throw new Error(error.error || "API 호출 실패");
             }
 
             const data = await response.json();
