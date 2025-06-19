@@ -1,53 +1,175 @@
-
 <!--templates/login.html-->
 
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Login</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+    <script src="/js/firebase-config.js"></script>
+    <style>
+        /* 해당 css는 비밀번호 찾기 모달 창 스타일 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+        }
+
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            z-index: 1001;
+            width: 90%;
+            max-width: 400px;
+            transition: none;
+        }
+
+        .modal:hover {
+            transform: translate(-50%, -50%);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            font-size: 1.5em;
+            color: #666;
+            transition: color 0.2s ease;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .modal-content {
+            text-align: center;
+        }
+
+        .modal-title {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .reset-link {
+            color: #444444;
+            text-decoration: none;
+            transition: color 0.2s ease;
+            position: relative;
+            display: inline-block;
+        }
+
+        .reset-link:hover {
+            color: #000000;
+        }
+
+        .reset-link::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 1px;
+            bottom: -2px;
+            left: 0;
+            background-color: #000000;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.2s ease;
+        }
+
+        .reset-link:hover::after {
+            transform: scaleX(1);
+        }
+    </style>
 </head>
 <body>
-<h2>Login</h2>
-<form id="login-form" style="display: none;">
-    <label for="email">Email:</label>
-    <input type="email" id="email" required>
-    <br>
-    <label for="password">Password:</label>
-    <input type="password" id="password" required>
-    <br>
-    <button type="submit">Login</button>
-</form>
+<div class="container">
+    <div class="glass-card text-center">
+        <h2>Login</h2>
+        <form id="login-form" style="display: none;">
+            <div class="form-group">
+                <input type="email" id="email" class="glass-input" placeholder="Email" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="password" class="glass-input" placeholder="Password" required>
+            </div>
+            <button type="submit" class="glass-button">Login</button>
+        </form>
 
-<button id="show-email-login">이메일로 로그인</button>
-<br><br>
-<button id="google-login">Google로 로그인</button>
+        <div class="mb-20">
+            <button id="show-email-login" class="glass-button">
+                <i class="fas fa-envelope"></i> 이메일로 로그인
+            </button>
+        </div>
+        
+        <div class="mb-20">
+            <button id="google-login" class="glass-button">
+                <i class="fab fa-google"></i> Google로 로그인
+            </button>
+        </div>
 
-<p><a href="#" id="reset-password-link">비밀번호를 잊으셨나요?</a></p>
-<p>계정이 없으신가요? <a href="/register">회원가입</a></p>
+        <!-- 개발용 임시 로그인 버튼 -->
+        <div class="mb-20">
+            <button id="dev-login" class="glass-button" style="background: rgba(255, 0, 0, 0.1);">
+                <i class="fas fa-code"></i> 개발자 모드 로그인
+            </button>
+        </div>
 
-<p id="message" style="color: red;"></p>
+        <p><a href="#" id="reset-password-link" class="reset-link">비밀번호를 잊으셨나요?</a></p>
+        <p>계정이 없으신가요? <a href="/register">회원가입</a></p>
+
+        <p id="message" style="color: red;"></p>
+    </div>
+</div>
+
+<!-- 비밀번호 재설정 모달 -->
+<div id="reset-password-modal" class="modal-overlay">
+    <div class="modal glass-card">
+        <span class="modal-close" onclick="closeResetModal()">&times;</span>
+        <div class="modal-content">
+            <h3 class="modal-title"><i class="fas fa-key"></i> 비밀번호 재설정</h3>
+            <div class="form-group">
+                <input type="email" id="reset-email" class="glass-input" 
+                       placeholder="이메일을 입력하세요" required>
+            </div>
+            <button onclick="sendResetEmail()" class="glass-button">
+                <i class="fas fa-paper-plane"></i> 재설정 메일 보내기
+            </button>
+        </div>
+    </div>
+</div>
 
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyC_fS_I_g0jicSPKLqBxF8if2ffnDKrvNM",
-        authDomain: "date-app-41a1c.firebaseapp.com",
-        projectId: "date-app-41a1c",
-        storageBucket: "date-app-41a1c.firebasestorage.app",
-        messagingSenderId: "950558236414",
-        appId: "1:950558236414:web:f65dad635607345aa8cfaf",
-        measurementId: "G-EBTEFW9PDH"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
+    // 개발자 모드 로그인
+    document.getElementById('dev-login').addEventListener('click', function() {
+        const devToken = 'dev_token_' + Date.now();
+        localStorage.setItem('jwtToken', devToken);
+        localStorage.setItem('devMode', 'true');
+        location.replace('/home');
+    });
 
     // 이메일 로그인 폼 보여주는 버튼 이벤트
     document.getElementById('show-email-login').addEventListener('click', () => {
         const form = document.getElementById('login-form');
-        form.style.display = 'block'; // 보여주기
-        document.getElementById('show-email-login').style.display = 'none'; // 버튼 숨기기
+        form.style.display = 'block';
+        document.getElementById('show-email-login').style.display = 'none';
     });
 
     document.getElementById('login-form').addEventListener('submit', async function (event) {
@@ -63,9 +185,8 @@
             const userCredential = await auth.signInWithEmailAndPassword(email, password);
             const user = userCredential.user;
 
-            // ✅ 이메일 인증 여부 확인
             if (!user.emailVerified && !user.providerData[0].providerId.includes('google.com')) {
-                await auth.signOut(); // 인증 안된 유저는 강제 로그아웃
+                await auth.signOut();
                 messageElement.textContent = "❌ 이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.";
                 return;
             }
@@ -79,7 +200,7 @@
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({idToken: idToken}),
-                credentials: 'include' // 쿠키를 함께 보낸다 (만약 필요한 경우)
+                credentials: 'include'
             });
 
             if (!response.ok) {
@@ -104,18 +225,49 @@
         }
     });
 
-    document.getElementById('reset-password-link').addEventListener('click', function () {
-        const email = prompt("비밀번호 재설정 메일을 받을 이메일을 입력하세요:");
-        if (!email) return;
+    function openResetModal() {
+        document.getElementById('reset-password-modal').style.display = 'block';
+    }
 
-        firebase.auth().sendPasswordResetEmail(email)
-            .then(() => {
-                alert("✅ 비밀번호 재설정 이메일을 보냈습니다. 이메일을 확인해주세요.");
-            })
-            .catch(error => {
-                console.error("❌ 비밀번호 재설정 실패:", error);
-                alert("❌ " + (error.message || "비밀번호 재설정 중 오류 발생"));
-            });
+    function closeResetModal() {
+        document.getElementById('reset-password-modal').style.display = 'none';
+    }
+
+    async function sendResetEmail() {
+        const email = document.getElementById('reset-email').value.trim();
+        if (!email) {
+            alert("이메일을 입력해주세요.");
+            return;
+        }
+
+        try {
+            await firebase.auth().sendPasswordResetEmail(email);
+            alert("✅ 비밀번호 재설정 이메일을 보냈습니다. 이메일을 확인해주세요.");
+            closeResetModal();
+        } catch (error) {
+            console.error("❌ 비밀번호 재설정 실패:", error);
+            alert("❌ " + (error.message || "비밀번호 재설정 중 오류 발생"));
+        }
+    }
+
+    document.getElementById('reset-password-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        openResetModal();
+    });
+
+    // 모달 외부 클릭 시 닫기
+    window.onclick = function(event) {
+        const modal = document.getElementById('reset-password-modal');
+        if (event.target === modal) {
+            closeResetModal();
+        }
+    }
+
+    // ESC 키로 모달 닫기
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeResetModal();
+        }
     });
 
     document.getElementById("google-login").addEventListener("click", async function () {
@@ -129,7 +281,6 @@
             console.log("✅ 구글 로그인 성공:", user.email);
             console.log("🪪 ID Token:", idToken.substring(0, 20) + "...");
 
-            // JWT 요청
             const response = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

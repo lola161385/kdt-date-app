@@ -1,33 +1,113 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>홈</title>
+    <title>프로필 - Date App</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <style>
+        .profile-info {
+            margin: 15px 0;
+        }
+        .profile-info label {
+            font-weight: bold;
+            color: #666;
+            margin-right: 10px;
+        }
+        .profile-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .danger-button {
+            background: rgba(255, 100, 100, 0.1);
+            border: 1px solid rgba(255, 100, 100, 0.3);
+            color: #ff6464;
+        }
+        .danger-button:hover {
+            background: rgba(255, 100, 100, 0.2);
+        }
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+        }
+        .tag {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
 </head>
 <body>
-<h2>프로필 페이지</h2>
+    <div class="container">
+        <nav class="glass-nav">
+            <h1><i class="fas fa-user-circle"></i> 프로필</h1>
+            <div class="nav-actions">
+                <a href="/home" class="glass-button">
+                    <i class="fas fa-home"></i> 홈으로
+                </a>
+                <a href="/logout" id="logout-link" class="glass-button">
+                    <i class="fas fa-sign-out-alt"></i> 로그아웃
+                </a>
+            </div>
+        </nav>
 
-<div id="message"></div>
+        <div class="main-content">
+            <div id="message"></div>
 
-<div id="profile-section" style="display:none;">
-    <h3>프로필 정보</h3>
-    <p>이메일: <span id="userEmail"></span></p>
-    <p>이름: <span id="name"></span></p>
-    <p>성별: <span id="gender"></span></p>
-    <p>나이: <span id="birthdate"></span></p>
-    <p>자기소개: <span id="bio"></span></p>
-    <p>MBTI: <span id="mbti"></span></p>
-    <p>성격 태그: <span id="tags"></span></p>
-</div>
+            <div id="profile-section" style="display:none;" class="glass-card">
+                <div class="profile-info">
+                    <label><i class="fas fa-envelope"></i> 이메일:</label>
+                    <span id="userEmail"></span>
+                </div>
+                <div class="profile-info">
+                    <label><i class="fas fa-user"></i> 이름:</label>
+                    <span id="name"></span>
+                </div>
+                <div class="profile-info">
+                    <label><i class="fas fa-venus-mars"></i> 성별:</label>
+                    <span id="gender"></span>
+                </div>
+                <div class="profile-info">
+                    <label><i class="fas fa-birthday-cake"></i> 나이:</label>
+                    <span id="birthdate"></span>
+                </div>
+                <div class="profile-info">
+                    <label><i class="fas fa-comment"></i> 자기소개:</label>
+                    <p id="bio" style="margin: 10px 0; white-space: pre-line;"></p>
+                </div>
+                <div class="profile-info">
+                    <label><i class="fas fa-brain"></i> MBTI:</label>
+                    <span id="mbti"></span>
+                </div>
+                <div class="profile-info">
+                    <label><i class="fas fa-tags"></i> 성격 태그:</label>
+                    <div class="tag-list">
+                        <div id="tags"></div>
+                    </div>
+                </div>
 
-<a href="/home">
-    <button type="button" style="margin-top: 1rem;">홈으로</button>
-</a>
-<a href="/profile/edit" style="margin-top: 1rem;"><button type="button">프로필 수정하기</button></a>
-<button type="button" id="delete-account" style="margin-top: 1rem;">회원탈퇴</button>
-<a href="/logout" id="logout-link">로그아웃</a>
+                <div class="profile-actions">
+                    <a href="/profile/edit" class="glass-button">
+                        <i class="fas fa-edit"></i> 프로필 수정
+                    </a>
+                    <button type="button" id="delete-account" class="glass-button danger-button">
+                        <i class="fas fa-user-times"></i> 회원탈퇴
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 <script>
     const firebaseConfig = {
@@ -58,11 +138,9 @@
 
             const uid = user.uid;
 
-            // ✅ 1. Realtime Database에서 사용자 데이터 삭제
             await database.ref('users/' + uid).remove();
             console.log("🗑️ Realtime Database 사용자 데이터 삭제 완료");
 
-            // ✅ 2. Firebase Authentication에서 계정 삭제
             await user.delete();
             console.log("✅ Firebase Authentication 사용자 삭제 완료");
 
@@ -111,7 +189,11 @@
 
                     const personality = data.profile.personality || {};
                     document.getElementById('mbti').textContent = personality.mbti || '-';
-                    document.getElementById('tags').textContent = (personality.tags || []).join(', ');
+                    
+                    // 태그를 개별 태그 요소로 변환
+                    const tagsContainer = document.getElementById('tags');
+                    const tags = personality.tags || [];
+                    tagsContainer.innerHTML = tags.map(tag => `<span class="tag">${tag}</span>`).join('');
                 }
             })
             .catch(error => {
@@ -141,7 +223,6 @@
 
         return age;
     }
-
 </script>
 </body>
 </html>

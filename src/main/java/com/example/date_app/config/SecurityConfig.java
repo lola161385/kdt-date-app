@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import com.example.date_app.util.JwtUtil;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 
 @Configuration
 public class SecurityConfig {
@@ -23,10 +24,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // Static 리소스 허용
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico").permitAll()
                         // 개발용 임시 허용 (React 전환 시 수정 예정)
-                        .requestMatchers("/login", "/register", "/css/**", "/js/**", "/api/login", "/home", "/profile", "/profile/edit", "/match", "/chat/**").permitAll()
+                        .requestMatchers("/login", "/register", "/api/login", "/home", "/profile", "/profile/edit", "/match", "/chat/**").permitAll()
                         // React 전환 시 수정 예정: .requestMatchers("/api/login", "/api/register", "/api/public/**").permitAll()
                         .anyRequest().authenticated()
                 )
