@@ -136,11 +136,32 @@
 
                 <div class="form-group">
                     <label><i class="fas fa-comment"></i> 자기소개</label>
-                    <button type="button" id="generate-intro-btn" class="glass-button" style="margin-bottom: 10px;">
-                        <i class="fas fa-magic"></i> AI 자기소개글 생성
-                    </button>
-                    <textarea id="bio" name="bio" class="glass-input" 
-                              placeholder="AI가 생성한 자기소개가 여기에 표시됩니다." rows="5"></textarea>
+
+                    <!-- 스타일 선택 옵션 -->
+                    <div class="style-selection" style="margin-bottom: 15px;">
+                        <label style="font-size: 14px; color: #666; margin-bottom: 8px; display: block;">
+                            <i class="fas fa-palette"></i> 자기소개 스타일 선택
+                        </label>
+                        <select id="intro-style" class="glass-input" style="margin-bottom: 10px;">
+                            <option value="friendly">친근하고 자연스러운 (기본)</option>
+                            <option value="cute">귀엽고 사랑스러운</option>
+                            <option value="professional">차분하고 성숙한</option>
+                            <option value="humorous">유머러스하고 재치있는</option>
+                            <option value="romantic">로맨틱하고 감성적인</option>
+                            <option value="active">활발하고 에너지 넘치는</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <button type="button" id="generate-intro-btn" class="glass-button" style="flex: 1;">
+                            <i class="fas fa-magic"></i> AI 자기소개글 생성
+                        </button>
+                        <button type="button" id="generate-multiple-btn" class="glass-button" style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="fas fa-layer-group"></i> 3가지 스타일 생성
+                        </button>
+                    </div>
+                    <textarea id="bio" name="bio" class="glass-input"
+                              placeholder="위에서 스타일을 선택하고 'AI 자기소개글 생성' 버튼을 눌러보세요!" rows="5"></textarea>
                 </div>
 
                 <div class="form-actions">
@@ -239,6 +260,7 @@
         const likeKeywordsInput = document.getElementById('like-keywords').value.trim();
         const bioField = document.getElementById('bio');
         const mbti = document.getElementById('mbti').value;
+        const style = document.getElementById('intro-style').value; // 스타일 선택 값 추가
 
         const likeKeywords = Array.from(new Set(likeKeywordsInput.split(',').map(keyword => keyword.trim())));
 
@@ -260,8 +282,90 @@
             return;
         }
 
+        // 로딩 상태 표시
+        const originalButtonText = document.getElementById('generate-intro-btn').innerHTML;
+        document.getElementById('generate-intro-btn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> 생성 중...';
+        document.getElementById('generate-intro-btn').disabled = true;
+
         try {
+            const requestBody = {
+                keywords: keywords,
+                mbti: [mbti],
+                likeKeyWords: validLikeKeywords,
+            };
+
+            // 스타일이 기본값이 아닌 경우에만 추가
+            if (style && style !== 'friendly') {
+                requestBody.style = style;
+            }
+
             const response = await fetch("/api/ai/generate-introduction", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || "API 호출 실패");
+            }
+
+            const data = await response.json();
+            bioField.value = data.introduction;
+
+            // 성공 메시지 표시
+            const successMsg = document.createElement('div');
+            successMsg.style.cssText = 'color: #4CAF50; font-size: 12px; margin-top: 5px;';
+            successMsg.textContent = '✅ 자기소개글이 성공적으로 생성되었습니다!';
+            bioField.parentNode.appendChild(successMsg);
+            setTimeout(() => successMsg.remove(), 3000);
+
+        } catch (error) {
+            console.error("자기소개글 생성 실패:", error);
+            alert("자기소개글 생성에 실패했습니다. 다시 시도해주세요.");
+        } finally {
+            // 로딩 상태 해제
+            document.getElementById('generate-intro-btn').innerHTML = originalButtonText;
+            document.getElementById('generate-intro-btn').disabled = false;
+        }
+    });
+
+    // 다중 자기소개글 생성 기능
+    document.getElementById('generate-multiple-btn').addEventListener('click', async () => {
+        const keywords = Array.from(selectedTags);
+        const likeKeywordsInput = document.getElementById('like-keywords').value.trim();
+        const mbti = document.getElementById('mbti').value;
+
+        const likeKeywords = Array.from(new Set(likeKeywordsInput.split(',').map(keyword => keyword.trim())));
+        const validLikeKeywords = likeKeywords.filter(keyword => keyword !== '');
+
+        if (validLikeKeywords.length > 5) {
+            document.getElementById('like-keywords-error').style.display = 'block';
+            return;
+        } else {
+            document.getElementById('like-keywords-error').style.display = 'none';
+        }
+
+        if (!mbti || keywords.length === 0) {
+            alert("MBTI와 본인 태그는 필수입니다.");
+            return;
+        }
+
+        if (validLikeKeywords.length === 0) {
+            alert("선호하는 키워드는 최소 한 개 이상 입력해야 합니다.");
+            return;
+        }
+
+        // 로딩 상태 표시
+        const originalButtonText = document.getElementById('generate-multiple-btn').innerHTML;
+        document.getElementById('generate-multiple-btn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> 생성 중...';
+        document.getElementById('generate-multiple-btn').disabled = true;
+
+        try {
+            const response = await fetch("/api/ai/generate-multiple-introductions", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -280,12 +384,116 @@
             }
 
             const data = await response.json();
-            bioField.value = data.introduction;
+            showIntroductionOptions(data.introductions);
+
         } catch (error) {
-            console.error("자기소개글 생성 실패:", error);
+            console.error("다중 자기소개글 생성 실패:", error);
             alert("자기소개글 생성에 실패했습니다. 다시 시도해주세요.");
+        } finally {
+            // 로딩 상태 해제
+            document.getElementById('generate-multiple-btn').innerHTML = originalButtonText;
+            document.getElementById('generate-multiple-btn').disabled = false;
         }
     });
+
+    // 자기소개글 선택 모달 표시 함수
+    function showIntroductionOptions(introductions) {
+        // 기존 모달이 있다면 제거
+        const existingModal = document.getElementById('intro-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // 모달 생성
+        const modal = document.createElement('div');
+        modal.id = 'intro-modal';
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: flex; justify-content: center;
+            align-items: center; z-index: 1000;
+        `;
+
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white; padding: 30px; border-radius: 15px;
+            max-width: 800px; width: 90%; max-height: 80%; overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        `;
+
+        modalContent.innerHTML = `
+            <h3 style="text-align: center; margin-bottom: 20px; color: #333;">
+                <i class="fas fa-layer-group"></i> 자기소개글 선택하기
+            </h3>
+            <p style="text-align: center; color: #666; margin-bottom: 30px;">
+                마음에 드는 자기소개글을 선택해주세요!
+            </p>
+            <div id="intro-options"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="close-modal" style="
+                    padding: 10px 20px; background: #ccc; border: none;
+                    border-radius: 5px; cursor: pointer;
+                ">닫기</button>
+            </div>
+        `;
+
+        const optionsContainer = modalContent.querySelector('#intro-options');
+        const styles = ['친근하고 자연스러운', '유머러스하고 재치있는', '로맨틱하고 감성적인'];
+
+        introductions.forEach((intro, index) => {
+            const optionDiv = document.createElement('div');
+            optionDiv.style.cssText = `
+                border: 2px solid #e0e0e0; border-radius: 10px; padding: 20px;
+                margin-bottom: 15px; cursor: pointer; transition: all 0.3s;
+                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            `;
+
+            optionDiv.innerHTML = `
+                <div style="font-weight: bold; color: #667eea; margin-bottom: 10px;">
+                    ${styles[index] || `스타일 ${index + 1}`}
+                </div>
+                <div style="line-height: 1.6; color: #333;">${intro}</div>
+            `;
+
+            optionDiv.addEventListener('click', () => {
+                document.getElementById('bio').value = intro;
+                modal.remove();
+
+                // 선택 완료 메시지
+                const successMsg = document.createElement('div');
+                successMsg.style.cssText = 'color: #4CAF50; font-size: 12px; margin-top: 5px;';
+                successMsg.textContent = '✅ 자기소개글이 선택되었습니다!';
+                document.getElementById('bio').parentNode.appendChild(successMsg);
+                setTimeout(() => successMsg.remove(), 3000);
+            });
+
+            optionDiv.addEventListener('mouseenter', () => {
+                optionDiv.style.borderColor = '#667eea';
+                optionDiv.style.transform = 'translateY(-2px)';
+                optionDiv.style.boxShadow = '0 5px 15px rgba(102, 126, 234, 0.3)';
+            });
+
+            optionDiv.addEventListener('mouseleave', () => {
+                optionDiv.style.borderColor = '#e0e0e0';
+                optionDiv.style.transform = 'translateY(0)';
+                optionDiv.style.boxShadow = 'none';
+            });
+
+            optionsContainer.appendChild(optionDiv);
+        });
+
+        modalContent.querySelector('#close-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+    }
 
     document.getElementById('save-all').addEventListener('click', async () => {
         const name = document.getElementById('name').value;

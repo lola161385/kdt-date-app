@@ -24,21 +24,54 @@ public class AiController {
         try {
             @SuppressWarnings("unchecked")
             List<String> keywords = (List<String>) request.get("keywords");
-            
+
             @SuppressWarnings("unchecked")
             List<String> mbti = (List<String>) request.get("mbti");
-            
+
             @SuppressWarnings("unchecked")
             List<String> likeKeyWords = (List<String>) request.get("likeKeyWords");
 
-            String introduction = aiService.generateIntroduction(keywords, mbti, likeKeyWords);
-            
+            // 스타일 옵션 추가 (선택사항)
+            String style = (String) request.get("style");
+
+            String introduction;
+            if (style != null && !style.trim().isEmpty()) {
+                introduction = aiService.generateIntroduction(keywords, mbti, likeKeyWords, style);
+            } else {
+                introduction = aiService.generateIntroduction(keywords, mbti, likeKeyWords);
+            }
+
             Map<String, String> response = new HashMap<>();
             response.put("introduction", introduction);
-            
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    @PostMapping("/generate-multiple-introductions")
+    public ResponseEntity<Map<String, Object>> generateMultipleIntroductions(@RequestBody Map<String, Object> request) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<String> keywords = (List<String>) request.get("keywords");
+
+            @SuppressWarnings("unchecked")
+            List<String> mbti = (List<String>) request.get("mbti");
+
+            @SuppressWarnings("unchecked")
+            List<String> likeKeyWords = (List<String>) request.get("likeKeyWords");
+
+            List<String> introductions = aiService.generateMultipleIntroductions(keywords, mbti, likeKeyWords);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("introductions", introductions);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
             return ResponseEntity.status(500).body(errorResponse);
         }
